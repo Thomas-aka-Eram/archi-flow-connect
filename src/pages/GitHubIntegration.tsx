@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +12,7 @@ import {
   Link, 
   ExternalLink, 
   Settings,
-  Sync,
+  RefreshCw,
   AlertCircle,
   CheckCircle
 } from "lucide-react";
@@ -83,7 +82,7 @@ export default function GitHubIntegration() {
         </div>
         <div className="flex items-center gap-3">
           <Button variant="outline" size="sm" onClick={handleSync} disabled={!isConnected}>
-            <Sync className="h-4 w-4 mr-2" />
+            <RefreshCw className="h-4 w-4 mr-2" />
             Sync Commits
           </Button>
           <Button variant="outline" size="sm">

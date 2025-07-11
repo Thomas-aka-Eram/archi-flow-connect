@@ -12,7 +12,7 @@ const mockReviews = {
   docs: [
     {
       id: 'review-1',
-      type: 'block',
+      type: 'block' as const,
       title: 'Login API Schema Design',
       author: 'Raj',
       reviewer: 'Aisha',
@@ -23,7 +23,7 @@ const mockReviews = {
     },
     {
       id: 'review-2',
-      type: 'block',
+      type: 'block' as const,
       title: 'Password Recovery Flow',
       author: 'Luis',
       reviewer: 'Aisha',
@@ -36,7 +36,7 @@ const mockReviews = {
   tasks: [
     {
       id: 'review-3',
-      type: 'task',
+      type: 'task' as const,
       title: 'Implement OAuth Login',
       author: 'Luis',
       reviewer: 'Carlos',
