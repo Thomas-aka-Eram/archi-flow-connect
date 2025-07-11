@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { Layout } from "@/components/layout/Layout";
+import SDLCDocumentation from "./pages/SDLCDocumentation";
 
 const queryClient = new QueryClient();
 
@@ -18,7 +19,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/sdlc" element={<Layout><div className="p-6"><h1 className="text-2xl font-bold">SDLC Documentation</h1><p className="text-muted-foreground mt-2">Coming soon...</p></div></Layout>} />
+          <Route path="/sdlc" element={<Layout><SDLCDocumentation /></Layout>} />
           <Route path="/tasks" element={<Layout><div className="p-6"><h1 className="text-2xl font-bold">Task Management</h1><p className="text-muted-foreground mt-2">Coming soon...</p></div></Layout>} />
           <Route path="/reviews" element={<Layout><div className="p-6"><h1 className="text-2xl font-bold">Reviews & Approval</h1><p className="text-muted-foreground mt-2">Coming soon...</p></div></Layout>} />
           <Route path="/github" element={<Layout><div className="p-6"><h1 className="text-2xl font-bold">GitHub Integration</h1><p className="text-muted-foreground mt-2">Coming soon...</p></div></Layout>} />
