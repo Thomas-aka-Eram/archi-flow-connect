@@ -26,14 +26,14 @@ const mockDocuments = {
       title: 'Functional Requirements',
       lastModified: '2024-07-10',
       blocks: 12,
-      status: 'active'
+      status: 'active' as const
     },
     {
       id: 'req-2', 
       title: 'Non-Functional Requirements',
       lastModified: '2024-07-08',
       blocks: 8,
-      status: 'draft'
+      status: 'draft' as const
     }
   ],
   design: [
@@ -42,14 +42,14 @@ const mockDocuments = {
       title: 'UI Wireframes',
       lastModified: '2024-07-09',
       blocks: 15,
-      status: 'active'
+      status: 'active' as const
     },
     {
       id: 'des-2',
       title: 'API Schema Design',
       lastModified: '2024-07-07',
       blocks: 6,
-      status: 'review'
+      status: 'review' as const
     }
   ],
   development: [
@@ -58,7 +58,7 @@ const mockDocuments = {
       title: 'Implementation Guide',
       lastModified: '2024-07-11',
       blocks: 20,
-      status: 'active'
+      status: 'active' as const
     }
   ],
   testing: [
@@ -67,7 +67,7 @@ const mockDocuments = {
       title: 'Test Cases',
       lastModified: '2024-07-06',
       blocks: 18,
-      status: 'draft'
+      status: 'draft' as const
     }
   ]
 };

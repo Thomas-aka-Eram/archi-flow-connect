@@ -8,6 +8,9 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { Layout } from "@/components/layout/Layout";
 import SDLCDocumentation from "./pages/SDLCDocumentation";
+import TaskManagement from "./pages/TaskManagement";
+import ReviewApproval from "./pages/ReviewApproval";
+import GitHubIntegration from "./pages/GitHubIntegration";
 
 const queryClient = new QueryClient();
 
@@ -20,9 +23,9 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/sdlc" element={<Layout><SDLCDocumentation /></Layout>} />
-          <Route path="/tasks" element={<Layout><div className="p-6"><h1 className="text-2xl font-bold">Task Management</h1><p className="text-muted-foreground mt-2">Coming soon...</p></div></Layout>} />
-          <Route path="/reviews" element={<Layout><div className="p-6"><h1 className="text-2xl font-bold">Reviews & Approval</h1><p className="text-muted-foreground mt-2">Coming soon...</p></div></Layout>} />
-          <Route path="/github" element={<Layout><div className="p-6"><h1 className="text-2xl font-bold">GitHub Integration</h1><p className="text-muted-foreground mt-2">Coming soon...</p></div></Layout>} />
+          <Route path="/tasks" element={<Layout><TaskManagement /></Layout>} />
+          <Route path="/reviews" element={<Layout><ReviewApproval /></Layout>} />
+          <Route path="/github" element={<Layout><GitHubIntegration /></Layout>} />
           <Route path="/calendar" element={<Layout><div className="p-6"><h1 className="text-2xl font-bold">Calendar</h1><p className="text-muted-foreground mt-2">Coming soon...</p></div></Layout>} />
           <Route path="/reports" element={<Layout><div className="p-6"><h1 className="text-2xl font-bold">Reports</h1><p className="text-muted-foreground mt-2">Coming soon...</p></div></Layout>} />
           <Route path="/notifications" element={<Layout><div className="p-6"><h1 className="text-2xl font-bold">Notifications</h1><p className="text-muted-foreground mt-2">Coming soon...</p></div></Layout>} />
