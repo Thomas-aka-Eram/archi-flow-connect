@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { X, Plus } from "lucide-react";
+import { useTagsDomains } from "@/contexts/TagsDomainsContext";
 
 interface TaskCreationModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ interface TaskCreationModalProps {
 }
 
 export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
+  const { tags: availableTags, domains: availableDomains } = useTagsDomains();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -26,23 +28,27 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
     milestone: '',
     dueDate: ''
   });
-  const [tags, setTags] = useState<string[]>([]);
-  const [newTag, setNewTag] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
-  const handleAddTag = () => {
-    if (newTag.trim() && !tags.includes(newTag.trim())) {
-      const formattedTag = newTag.startsWith('#') ? newTag : `#${newTag}`;
-      setTags([...tags, formattedTag]);
-      setNewTag('');
+  const teamMembers = [
+    { value: 'luis', name: 'Luis', skills: ['React', 'Node.js'], availability: 90 },
+    { value: 'raj', name: 'Raj', skills: ['Python', 'API'], availability: 85 },
+    { value: 'aisha', name: 'Aisha', skills: ['UI/UX', 'Frontend'], availability: 75 },
+    { value: 'carlos', name: 'Carlos', skills: ['DevOps', 'Backend'], availability: 60 }
+  ];
+
+  const handleAddTag = (tag: string) => {
+    if (!selectedTags.includes(tag)) {
+      setSelectedTags([...selectedTags, tag]);
     }
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
-    setTags(tags.filter(tag => tag !== tagToRemove));
+    setSelectedTags(selectedTags.filter(tag => tag !== tagToRemove));
   };
 
   const handleSubmit = () => {
-    console.log('Creating task:', { ...formData, tags });
+    console.log('Creating task:', { ...formData, tags: selectedTags });
     onClose();
   };
 
@@ -84,13 +90,19 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
               <Label>Assignee</Label>
               <Select value={formData.assignee} onValueChange={(value) => setFormData({ ...formData, assignee: value })}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select assignee" />
+                  <SelectValue placeholder="Select team member" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="luis">Luis (90%)</SelectItem>
-                  <SelectItem value="raj">Raj (85%)</SelectItem>
-                  <SelectItem value="aisha">Aisha (75%)</SelectItem>
-                  <SelectItem value="carlos">Carlos (60%)</SelectItem>
+                  {teamMembers.map((member) => (
+                    <SelectItem key={member.value} value={member.value}>
+                      <div className="flex items-center justify-between w-full">
+                        <span>{member.name}</span>
+                        <Badge variant="outline" className="ml-2 text-xs">
+                          {member.availability}% available
+                        </Badge>
+                      </div>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -102,9 +114,9 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
                   <SelectValue placeholder="Select priority" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="HIGH">High</SelectItem>
+                  <SelectItem value="MEDIUM">Medium</SelectItem>
+                  <SelectItem value="LOW">Low</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -123,6 +135,8 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
                   <SelectItem value="design">Design</SelectItem>
                   <SelectItem value="development">Development</SelectItem>
                   <SelectItem value="testing">Testing</SelectItem>
+                  <SelectItem value="deployment">Deployment</SelectItem>
+                  <SelectItem value="maintenance">Maintenance</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -134,10 +148,11 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
                   <SelectValue placeholder="Select domain" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ui">UI</SelectItem>
-                  <SelectItem value="api">API</SelectItem>
-                  <SelectItem value="db">Database</SelectItem>
-                  <SelectItem value="general">General</SelectItem>
+                  {availableDomains.map((domain) => (
+                    <SelectItem key={domain} value={domain.toLowerCase()}>
+                      {domain}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -180,28 +195,38 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
           {/* Tags */}
           <div>
             <Label>Tags</Label>
-            <div className="space-y-2">
-              <div className="flex flex-wrap gap-1 mb-2">
-                {tags.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="gap-1">
-                    {tag}
-                    <X 
-                      className="h-3 w-3 cursor-pointer" 
-                      onClick={() => handleRemoveTag(tag)}
-                    />
-                  </Badge>
-                ))}
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <span className="text-sm text-muted-foreground">Available Tags</span>
+                <div className="flex flex-wrap gap-1">
+                  {availableTags
+                    .filter(tag => !selectedTags.includes(tag))
+                    .map((tag) => (
+                      <Badge 
+                        key={tag} 
+                        variant="outline" 
+                        className="cursor-pointer hover:bg-muted"
+                        onClick={() => handleAddTag(tag)}
+                      >
+                        {tag}
+                      </Badge>
+                    ))}
+                </div>
               </div>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Add tag..."
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
-                />
-                <Button type="button" onClick={handleAddTag}>
-                  <Plus className="h-4 w-4" />
-                </Button>
+              
+              <div className="space-y-2">
+                <span className="text-sm text-muted-foreground">Selected Tags</span>
+                <div className="flex flex-wrap gap-1">
+                  {selectedTags.map((tag) => (
+                    <Badge key={tag} variant="secondary" className="gap-1">
+                      {tag}
+                      <X 
+                        className="h-3 w-3 cursor-pointer" 
+                        onClick={() => handleRemoveTag(tag)}
+                      />
+                    </Badge>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

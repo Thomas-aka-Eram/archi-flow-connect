@@ -1,46 +1,60 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ProjectProvider } from "@/contexts/ProjectContext";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import { Layout } from "@/components/layout/Layout";
-import SDLCDocumentation from "./pages/SDLCDocumentation";
-import TaskManagement from "./pages/TaskManagement";
-import ReviewApproval from "./pages/ReviewApproval";
-import GitHubIntegration from "./pages/GitHubIntegration";
-import ProjectManagement from "./pages/ProjectManagement";
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { Layout } from '@/components/layout/Layout';
+import { ProjectProvider } from '@/contexts/ProjectContext';
+import { TagsDomainsProvider } from '@/contexts/TagsDomainsContext';
+
+// Pages
+import Dashboard from '@/pages/Dashboard';
+import TaskManagement from '@/pages/TaskManagement';
+import SDLCDocumentation from '@/pages/SDLCDocumentation';
+import ReviewApproval from '@/pages/ReviewApproval';
+import GitHubIntegration from '@/pages/GitHubIntegration';
+import ProjectManagement from '@/pages/ProjectManagement';
+import Notifications from '@/pages/Notifications';
+import Settings from '@/pages/Settings';
+import LandingPage from '@/pages/LandingPage';
+import NotFound from '@/pages/NotFound';
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <ProjectProvider>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/manage" element={<Layout><ProjectManagement /></Layout>} />
-            <Route path="/sdlc" element={<Layout><SDLCDocumentation /></Layout>} />
-            <Route path="/tasks" element={<Layout><TaskManagement /></Layout>} />
-            <Route path="/reviews" element={<Layout><ReviewApproval /></Layout>} />
-            <Route path="/github" element={<Layout><GitHubIntegration /></Layout>} />
-            <Route path="/calendar" element={<Layout><div className="p-6"><h1 className="text-2xl font-bold">Calendar</h1><p className="text-muted-foreground mt-2">Coming soon...</p></div></Layout>} />
-            <Route path="/reports" element={<Layout><div className="p-6"><h1 className="text-2xl font-bold">Reports</h1><p className="text-muted-foreground mt-2">Coming soon...</p></div></Layout>} />
-            <Route path="/notifications" element={<Layout><div className="p-6"><h1 className="text-2xl font-bold">Notifications</h1><p className="text-muted-foreground mt-2">Coming soon...</p></div></Layout>} />
-            <Route path="/settings" element={<Layout><div className="p-6"><h1 className="text-2xl font-bold">Settings</h1><p className="text-muted-foreground mt-2">Coming soon...</p></div></Layout>} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </ProjectProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ProjectProvider>
+        <TagsDomainsProvider>
+          <Router>
+            <Routes>
+              {/* Landing page route */}
+              <Route path="/landing" element={<LandingPage />} />
+              
+              {/* Main app routes with layout */}
+              <Route path="/*" element={
+                <SidebarProvider>
+                  <Layout>
+                    <Routes>
+                      <Route path="/" element={<Dashboard />} />
+                      <Route path="/manage" element={<ProjectManagement />} />
+                      <Route path="/sdlc" element={<SDLCDocumentation />} />
+                      <Route path="/tasks" element={<TaskManagement />} />
+                      <Route path="/reviews" element={<ReviewApproval />} />
+                      <Route path="/github" element={<GitHubIntegration />} />
+                      <Route path="/notifications" element={<Notifications />} />
+                      <Route path="/settings" element={<Settings />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </Layout>
+                </SidebarProvider>
+              } />
+            </Routes>
+          </Router>
+        </TagsDomainsProvider>
+      </ProjectProvider>
+    </QueryClientProvider>
+  );
+}
 
 export default App;

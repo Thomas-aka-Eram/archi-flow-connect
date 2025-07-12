@@ -40,7 +40,7 @@ The system must support secure user authentication with the following capabiliti
 - Rate limiting for login attempts`,
       rendered: true,
       type: 'markdown',
-      tags: ['#auth', '#login', '#security'],
+      tags: ['#authentication', '#login', '#security'],
       domain: 'API',
       connections: ['block-design-1'],
       comments: 3
@@ -58,7 +58,7 @@ The system must support secure user authentication with the following capabiliti
 - Old password becomes invalid after reset`,
       rendered: false,
       type: 'markdown',
-      tags: ['#auth', '#password', '#recovery'],
+      tags: ['#authentication', '#password'],
       domain: 'API',
       connections: [],
       comments: 1
@@ -76,7 +76,6 @@ The system must support secure user authentication with the following capabiliti
     ));
     setEditingBlockId(null);
     
-    // Auto-create new block if this was the last block
     const blockIndex = blocks.findIndex(b => b.id === blockId);
     if (blockIndex === blocks.length - 1) {
       addNewBlock(blockId);
@@ -86,6 +85,12 @@ The system must support secure user authentication with the following capabiliti
   const handleBlockEdit = (blockId: string) => {
     setEditingBlockId(editingBlockId === blockId ? null : blockId);
     setSelectedBlockId(blockId);
+  };
+
+  const handleUpdateBlock = (blockId: string, updates: Partial<Block>) => {
+    setBlocks(blocks.map(block => 
+      block.id === blockId ? { ...block, ...updates } : block
+    ));
   };
 
   const addNewBlock = (afterBlockId?: string) => {
@@ -127,7 +132,6 @@ The system must support secure user authentication with the following capabiliti
     ));
   };
 
-  // Auto-focus first empty block on load
   useEffect(() => {
     const firstEmptyBlock = blocks.find(b => !b.content && !b.rendered);
     if (firstEmptyBlock && !editingBlockId) {
@@ -136,7 +140,6 @@ The system must support secure user authentication with the following capabiliti
     }
   }, []);
 
-  // Handle global keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && editingBlockId) {
@@ -150,7 +153,6 @@ The system must support secure user authentication with the following capabiliti
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
       <div className="border-b p-6 bg-background/95 backdrop-blur-sm sticky top-0 z-10">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -184,10 +186,8 @@ The system must support secure user authentication with the following capabiliti
         </div>
       </div>
 
-      {/* Notebook Interface */}
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-4xl mx-auto p-6">
-          {/* Notebook Blocks */}
           <div className="space-y-0">
             {blocks.map((block, index) => (
               <NotebookBlock
@@ -201,11 +201,11 @@ The system must support secure user authentication with the following capabiliti
                 onContentChange={(content) => handleBlockContentChange(block.id, content)}
                 onSelect={() => setSelectedBlockId(block.id)}
                 onDelete={() => handleBlockDelete(block.id)}
+                onUpdateBlock={(updates) => handleUpdateBlock(block.id, updates)}
               />
             ))}
           </div>
 
-          {/* Add first block if none exist */}
           {blocks.length === 0 && (
             <div className="text-center py-12">
               <h3 className="text-lg font-medium mb-2">Start your document</h3>
@@ -219,7 +219,6 @@ The system must support secure user authentication with the following capabiliti
             </div>
           )}
 
-          {/* Floating add block button */}
           {blocks.length > 0 && !editingBlockId && (
             <div className="text-center py-6">
               <Button 
@@ -235,7 +234,6 @@ The system must support secure user authentication with the following capabiliti
         </div>
       </div>
 
-      {/* Keyboard shortcuts hint */}
       {editingBlockId && (
         <div className="border-t bg-muted/30 px-6 py-2">
           <div className="flex items-center justify-between text-sm text-muted-foreground">

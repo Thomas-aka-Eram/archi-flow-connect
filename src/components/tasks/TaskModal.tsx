@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Calendar, 
   Clock, 
@@ -15,7 +16,8 @@ import {
   Activity,
   FileText,
   Send,
-  Edit
+  Edit,
+  GitCommit
 } from "lucide-react";
 
 interface TaskModalProps {
@@ -33,18 +35,43 @@ const mockTaskDetails = {
     priority: 'HIGH',
     phase: 'Development',
     domain: 'API',
-    tags: ['#auth', '#login', '#oauth'],
+    tags: ['#authentication', '#login', '#oauth'],
     estimatedHours: 8,
     milestone: 'Authentication System',
     dueDate: '2024-07-15',
     description: 'Implement OAuth2 login flow with Google and GitHub providers. Include JWT token generation and refresh logic.',
     linkedBlocks: [
-      { id: 'req-1', title: 'Login Feature', phase: 'Requirements' },
-      { id: 'des-1', title: 'OAuth UI Flow', phase: 'Design' }
+      { 
+        id: 'req-1', 
+        title: 'User Login Requirements', 
+        phase: 'Requirements',
+        content: `# User Login Requirements
+
+The system must support secure user authentication with the following capabilities:
+
+## Authentication Methods
+- Email and password
+- OAuth integration (Google, GitHub)
+- Multi-factor authentication (optional)`
+      },
+      { 
+        id: 'des-1', 
+        title: 'OAuth UI Flow', 
+        phase: 'Design',
+        content: `## OAuth Authentication Flow
+
+**User Journey:**
+1. User clicks "Login with Google/GitHub"
+2. Redirect to OAuth provider
+3. User authorizes application
+4. Callback with authorization code
+5. Exchange code for access token`
+      }
     ],
     activity: [
       { type: 'commit', message: 'feat: add Google OAuth integration', author: 'Luis', timestamp: '2024-07-11 14:30' },
-      { type: 'comment', message: 'Working on JWT token generation', author: 'Luis', timestamp: '2024-07-11 10:15' }
+      { type: 'comment', message: 'Working on JWT token generation', author: 'Luis', timestamp: '2024-07-11 10:15' },
+      { type: 'status_change', message: 'Status changed from TODO to IN_PROGRESS', author: 'Luis', timestamp: '2024-07-10 09:00' }
     ],
     comments: [
       { id: 1, author: 'Raj', message: 'Should we include Apple login as well?', timestamp: '2024-07-10 16:20' },
@@ -55,6 +82,7 @@ const mockTaskDetails = {
 
 export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
   const [newComment, setNewComment] = useState('');
+  const [taskStatus, setTaskStatus] = useState('IN_PROGRESS');
   const task = mockTaskDetails[taskId as keyof typeof mockTaskDetails];
 
   if (!task) return null;
@@ -64,9 +92,19 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
     setNewComment('');
   };
 
+  const handleStatusChange = (newStatus: string) => {
+    setTaskStatus(newStatus);
+    console.log('Status changed to:', newStatus);
+  };
+
+  const handleOpenDocument = (blockId: string) => {
+    console.log('Opening document:', blockId);
+    // Navigate to SDLC document
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <div className="flex items-start justify-between">
             <div>
@@ -78,10 +116,23 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                 <Badge variant="outline">{task.domain}</Badge>
               </div>
             </div>
-            <Button variant="outline" size="sm">
-              <Edit className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
+            <div className="flex items-center gap-2">
+              <Select value={taskStatus} onValueChange={handleStatusChange}>
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="TODO">To Do</SelectItem>
+                  <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                  <SelectItem value="PENDING_REVIEW">Pending Review</SelectItem>
+                  <SelectItem value="COMPLETED">Completed</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="sm">
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            </div>
           </div>
         </DialogHeader>
 
@@ -174,12 +225,30 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                 {task.linkedBlocks.map((block) => (
                   <Card key={block.id} className="cursor-pointer hover:shadow-md transition-shadow">
                     <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">{block.title}</h4>
-                          <p className="text-sm text-muted-foreground">{block.phase} Phase</p>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h4 className="font-medium">{block.title}</h4>
+                            <Badge variant="outline" className="text-xs">{block.phase} Phase</Badge>
+                          </div>
+                          <div className="text-sm text-muted-foreground mb-3">
+                            <div 
+                              className="prose prose-sm max-w-none"
+                              dangerouslySetInnerHTML={{ 
+                                __html: block.content.replace(/\n/g, '<br />').substring(0, 200) + '...' 
+                              }}
+                            />
+                          </div>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleOpenDocument(block.id)}
+                          >
+                            <FileText className="h-4 w-4 mr-2" />
+                            Open Document
+                          </Button>
                         </div>
-                        <Link className="h-4 w-4 text-muted-foreground" />
+                        <Link className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                       </div>
                     </CardContent>
                   </Card>
@@ -193,11 +262,13 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                   <Card key={index}>
                     <CardContent className="p-4">
                       <div className="flex items-start gap-3">
-                        <Avatar className="w-8 h-8">
-                          <AvatarFallback className="text-xs">
-                            {item.author.slice(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
+                        <div className="flex-shrink-0 mt-1">
+                          {item.type === 'commit' ? (
+                            <GitCommit className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <MessageSquare className="h-4 w-4 text-blue-500" />
+                          )}
+                        </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="font-medium">{item.author}</span>

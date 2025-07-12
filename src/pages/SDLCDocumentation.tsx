@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,6 +8,7 @@ import { PhaseNavigator } from "@/components/sdlc/PhaseNavigator";
 import { DocumentEditor } from "@/components/sdlc/DocumentEditor";
 import { DocumentList } from "@/components/sdlc/DocumentList";
 import { ExportModal } from "@/components/sdlc/ExportModal";
+import { TagsDomainManager } from "@/components/sdlc/TagsDomainManager";
 
 const phases = [
   { id: 'requirements', name: 'Requirements', color: 'bg-blue-500', enabled: true },
@@ -76,7 +76,7 @@ export default function SDLCDocumentation() {
   const [activePhase, setActivePhase] = useState('requirements');
   const [selectedDocument, setSelectedDocument] = useState<string | null>(null);
   const [showExportModal, setShowExportModal] = useState(false);
-  const [view, setView] = useState<'overview' | 'editor'>('overview');
+  const [view, setView] = useState<'overview' | 'editor' | 'config'>('overview');
 
   const handleDocumentSelect = (docId: string) => {
     setSelectedDocument(docId);
@@ -88,6 +88,13 @@ export default function SDLCDocumentation() {
     setSelectedDocument(null);
   };
 
+  const handleCreateDocument = () => {
+    // Create new document and open editor
+    const newDocId = `doc-${Date.now()}`;
+    setSelectedDocument(newDocId);
+    setView('editor');
+  };
+
   if (view === 'editor' && selectedDocument) {
     return (
       <div className="h-full">
@@ -95,6 +102,25 @@ export default function SDLCDocumentation() {
           documentId={selectedDocument} 
           onBack={handleBackToOverview}
         />
+      </div>
+    );
+  }
+
+  if (view === 'config') {
+    return (
+      <div className="p-6 space-y-6 h-full">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">SDLC Configuration</h1>
+            <p className="text-muted-foreground mt-1">
+              Manage tags, domains, and project templates
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => setView('overview')}>
+            Back to Overview
+          </Button>
+        </div>
+        <TagsDomainManager />
       </div>
     );
   }
@@ -118,9 +144,9 @@ export default function SDLCDocumentation() {
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => setView('config')}>
             <Settings className="h-4 w-4 mr-2" />
-            Configure Phases
+            Configure
           </Button>
         </div>
       </div>
@@ -154,7 +180,7 @@ export default function SDLCDocumentation() {
                   Manage documents and blocks for this phase
                 </p>
               </div>
-              <Button size="sm">
+              <Button size="sm" onClick={handleCreateDocument}>
                 <Plus className="h-4 w-4 mr-2" />
                 New Document
               </Button>
