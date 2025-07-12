@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, FileText, Settings, Download, Search } from "lucide-react";
 import { PhaseNavigator } from "@/components/sdlc/PhaseNavigator";
 import { DocumentEditor } from "@/components/sdlc/DocumentEditor";
-import { DocumentList } from "@/components/sdlc/DocumentList";
+import { DocumentTree } from "@/components/sdlc/DocumentTree";
 import { ExportModal } from "@/components/sdlc/ExportModal";
 import { TagsDomainManager } from "@/components/sdlc/TagsDomainManager";
 
@@ -25,14 +24,40 @@ const mockDocuments = {
       id: 'req-1',
       title: 'Functional Requirements',
       lastModified: '2024-07-10',
-      blocks: 12,
+      blocks: [
+        {
+          id: 'block-1',
+          title: 'User Login Requirements',
+          tags: ['#authentication', '#login', '#security'],
+          domain: 'API' as const,
+          description: 'Authentication system requirements including email/password and OAuth',
+          lastModified: '2024-07-10'
+        },
+        {
+          id: 'block-2',
+          title: 'Password Recovery',
+          tags: ['#authentication', '#password'],
+          domain: 'API' as const,
+          description: 'Password reset functionality with email verification',
+          lastModified: '2024-07-09'
+        }
+      ],
       status: 'active' as const
     },
     {
       id: 'req-2', 
       title: 'Non-Functional Requirements',
       lastModified: '2024-07-08',
-      blocks: 8,
+      blocks: [
+        {
+          id: 'block-3',
+          title: 'Performance Requirements',
+          tags: ['#performance', '#scalability'],
+          domain: 'GENERAL' as const,
+          description: 'System performance and scalability requirements',
+          lastModified: '2024-07-08'
+        }
+      ],
       status: 'draft' as const
     }
   ],
@@ -41,15 +66,17 @@ const mockDocuments = {
       id: 'des-1',
       title: 'UI Wireframes',
       lastModified: '2024-07-09',
-      blocks: 15,
+      blocks: [
+        {
+          id: 'block-4',
+          title: 'Login Page Wireframe',
+          tags: ['#ui', '#wireframe', '#login'],
+          domain: 'UI' as const,
+          description: 'Wireframe design for the login page interface',
+          lastModified: '2024-07-09'
+        }
+      ],
       status: 'active' as const
-    },
-    {
-      id: 'des-2',
-      title: 'API Schema Design',
-      lastModified: '2024-07-07',
-      blocks: 6,
-      status: 'review' as const
     }
   ],
   development: [
@@ -57,7 +84,16 @@ const mockDocuments = {
       id: 'dev-1',
       title: 'Implementation Guide',
       lastModified: '2024-07-11',
-      blocks: 20,
+      blocks: [
+        {
+          id: 'block-5',
+          title: 'API Implementation',
+          tags: ['#api', '#implementation'],
+          domain: 'API' as const,
+          description: 'Backend API implementation guidelines',
+          lastModified: '2024-07-11'
+        }
+      ],
       status: 'active' as const
     }
   ],
@@ -66,7 +102,16 @@ const mockDocuments = {
       id: 'test-1',
       title: 'Test Cases',
       lastModified: '2024-07-06',
-      blocks: 18,
+      blocks: [
+        {
+          id: 'block-6',
+          title: 'Login Test Cases',
+          tags: ['#testing', '#login'],
+          domain: 'GENERAL' as const,
+          description: 'Comprehensive test cases for login functionality',
+          lastModified: '2024-07-06'
+        }
+      ],
       status: 'draft' as const
     }
   ]
@@ -77,6 +122,13 @@ export default function SDLCDocumentation() {
   const [selectedDocument, setSelectedDocument] = useState<string | null>(null);
   const [showExportModal, setShowExportModal] = useState(false);
   const [view, setView] = useState<'overview' | 'editor' | 'config'>('overview');
+
+  const handleBlockSelect = (docId: string, blockId: string) => {
+    setSelectedDocument(docId);
+    setView('editor');
+    // In real implementation, we'd also navigate to the specific block
+    console.log(`Navigating to block ${blockId} in document ${docId}`);
+  };
 
   const handleDocumentSelect = (docId: string) => {
     setSelectedDocument(docId);
@@ -167,7 +219,7 @@ export default function SDLCDocumentation() {
 
       {/* Phase Content */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Documents List */}
+        {/* Documents Tree */}
         <div className="lg:col-span-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -186,9 +238,10 @@ export default function SDLCDocumentation() {
               </Button>
             </CardHeader>
             <CardContent>
-              <DocumentList 
+              <DocumentTree 
                 documents={mockDocuments[activePhase as keyof typeof mockDocuments] || []}
                 onDocumentSelect={handleDocumentSelect}
+                onBlockSelect={handleBlockSelect}
               />
             </CardContent>
           </Card>

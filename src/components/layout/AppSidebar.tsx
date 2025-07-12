@@ -10,9 +10,12 @@ import {
   Calendar,
   FileText,
   BarChart3,
-  Briefcase
+  Briefcase,
+  ChevronDown,
+  ChevronRight
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
+import { useState } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -26,15 +29,18 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useProject } from "@/contexts/ProjectContext";
+import { ProjectSwitcher } from "./ProjectSwitcher";
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const location = useLocation();
   const { currentProject, userRole } = useProject();
   const isCollapsed = state === "collapsed";
+  const [projectOverviewOpen, setProjectOverviewOpen] = useState(true);
 
-  const projectItems = [
+  const multiProjectItems = [
     { title: "Dashboard", url: "/", icon: LayoutDashboard, roles: ['all'] },
+    { title: "Analytics", url: "/analytics", icon: BarChart3, roles: ['PM', 'Admin'] },
     { title: "Project Management", url: "/manage", icon: Briefcase, roles: ['PM', 'Admin'] },
   ];
 
@@ -67,7 +73,7 @@ export function AppSidebar() {
     return itemRoles.includes('all') || itemRoles.includes(userRole);
   };
 
-  const renderMenuItems = (items: typeof projectItems) => {
+  const renderMenuItems = (items: typeof multiProjectItems) => {
     return items
       .filter(item => hasAccess(item.roles))
       .map((item) => (
@@ -96,37 +102,55 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
+        {/* Project Overview Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel 
+            className="flex items-center justify-between cursor-pointer"
+            onClick={() => setProjectOverviewOpen(!projectOverviewOpen)}
+          >
+            <span>Project Overview</span>
+            {!isCollapsed && (
+              projectOverviewOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />
+            )}
+          </SidebarGroupLabel>
+          
+          {projectOverviewOpen && (
+            <SidebarGroupContent>
+              {!isCollapsed && (
+                <div className="px-2 mb-3">
+                  <ProjectSwitcher />
+                </div>
+              )}
+              <SidebarMenu>
+                {renderMenuItems(multiProjectItems)}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          )}
+        </SidebarGroup>
+
+        {/* Development Section - Project Specific */}
         {currentProject && (
-          <>
-            <SidebarGroup>
-              <SidebarGroupLabel>Project Overview</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {renderMenuItems(projectItems)}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-
-            <SidebarGroup>
-              <SidebarGroupLabel>Development</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {renderMenuItems(developmentItems)}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-
-            <SidebarGroup>
-              <SidebarGroupLabel>Analytics</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {renderMenuItems(analyticsItems)}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </>
+          <SidebarGroup>
+            <SidebarGroupLabel>Development</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {renderMenuItems(developmentItems)}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
         )}
 
+        {/* Analytics Section - Multi Project */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Analytics</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {renderMenuItems(analyticsItems)}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* System Section */}
         <SidebarGroup>
           <SidebarGroupLabel>System</SidebarGroupLabel>
           <SidebarGroupContent>

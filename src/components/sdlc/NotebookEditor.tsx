@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -68,10 +67,10 @@ The system must support secure user authentication with the following capabiliti
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [editingBlockId, setEditingBlockId] = useState<string | null>('block-2');
 
-  const handleBlockFinalize = (blockId: string, content: string) => {
+  const handleBlockFinalize = (blockId: string, content: string, title?: string) => {
     setBlocks(blocks.map(block => 
       block.id === blockId 
-        ? { ...block, content, rendered: true }
+        ? { ...block, content, title, rendered: true }
         : block
     ));
     setEditingBlockId(null);
@@ -80,6 +79,12 @@ The system must support secure user authentication with the following capabiliti
     if (blockIndex === blocks.length - 1) {
       addNewBlock(blockId);
     }
+  };
+
+  const handleBlockTitleChange = (blockId: string, title: string) => {
+    setBlocks(blocks.map(block => 
+      block.id === blockId ? { ...block, title } : block
+    ));
   };
 
   const handleBlockEdit = (blockId: string) => {
@@ -196,9 +201,10 @@ The system must support secure user authentication with the following capabiliti
                 isSelected={selectedBlockId === block.id}
                 isEditing={editingBlockId === block.id}
                 onEdit={() => handleBlockEdit(block.id)}
-                onFinalize={(content) => handleBlockFinalize(block.id, content)}
+                onFinalize={(content, title) => handleBlockFinalize(block.id, content, title)}
                 onAddBlock={() => addNewBlock(block.id)}
                 onContentChange={(content) => handleBlockContentChange(block.id, content)}
+                onTitleChange={(title) => handleBlockTitleChange(block.id, title)}
                 onSelect={() => setSelectedBlockId(block.id)}
                 onDelete={() => handleBlockDelete(block.id)}
                 onUpdateBlock={(updates) => handleUpdateBlock(block.id, updates)}

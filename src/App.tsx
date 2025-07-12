@@ -16,7 +16,11 @@ import GitHubIntegration from '@/pages/GitHubIntegration';
 import ProjectManagement from '@/pages/ProjectManagement';
 import Notifications from '@/pages/Notifications';
 import Settings from '@/pages/Settings';
+import Calendar from '@/pages/Calendar';
+import Reports from '@/pages/Reports';
 import LandingPage from '@/pages/LandingPage';
+import Login from '@/pages/Login';
+import Signup from '@/pages/Signup';
 import NotFound from '@/pages/NotFound';
 
 const queryClient = new QueryClient();
@@ -28,8 +32,10 @@ function App() {
         <TagsDomainsProvider>
           <Router>
             <Routes>
-              {/* Landing page route */}
+              {/* Public routes */}
               <Route path="/landing" element={<LandingPage />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
               
               {/* Main app routes with layout */}
               <Route path="/*" element={
@@ -42,6 +48,8 @@ function App() {
                       <Route path="/tasks" element={<TaskManagement />} />
                       <Route path="/reviews" element={<ReviewApproval />} />
                       <Route path="/github" element={<GitHubIntegration />} />
+                      <Route path="/calendar" element={<Calendar />} />
+                      <Route path="/reports" element={<Reports />} />
                       <Route path="/notifications" element={<Notifications />} />
                       <Route path="/settings" element={<Settings />} />
                       <Route path="*" element={<NotFound />} />

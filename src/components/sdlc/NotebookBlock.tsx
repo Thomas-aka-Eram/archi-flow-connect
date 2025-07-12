@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { 
   Edit3, 
   Link, 
@@ -28,6 +29,7 @@ import { BlockTagsModal } from "./BlockTagsModal";
 
 interface Block {
   id: string;
+  title?: string;
   content: string;
   rendered: boolean;
   type: 'markdown' | 'text' | 'image' | 'diagram';
@@ -42,9 +44,10 @@ interface NotebookBlockProps {
   isSelected: boolean;
   isEditing: boolean;
   onEdit: () => void;
-  onFinalize: (content: string) => void;
+  onFinalize: (content: string, title?: string) => void;
   onAddBlock: () => void;
   onContentChange: (content: string) => void;
+  onTitleChange: (title: string) => void;
   onSelect: () => void;
   onDelete: () => void;
   onUpdateBlock: (updates: Partial<Block>) => void;
@@ -58,28 +61,46 @@ export function NotebookBlock({
   onFinalize,
   onAddBlock,
   onContentChange,
+  onTitleChange,
   onSelect,
   onDelete,
   onUpdateBlock
 }: NotebookBlockProps) {
   const [content, setContent] = useState(block.content);
+  const [title, setTitle] = useState(block.title || '');
   const [showTagsModal, setShowTagsModal] = useState(false);
+  const titleRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    if (isEditing && textareaRef.current) {
-      textareaRef.current.focus();
-      const len = textareaRef.current.value.length;
-      textareaRef.current.setSelectionRange(len, len);
+    if (isEditing) {
+      if (!block.title && titleRef.current) {
+        titleRef.current.focus();
+      } else if (textareaRef.current) {
+        textareaRef.current.focus();
+        const len = textareaRef.current.value.length;
+        textareaRef.current.setSelectionRange(len, len);
+      }
     }
-  }, [isEditing]);
+  }, [isEditing, block.title]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && e.shiftKey) {
       e.preventDefault();
-      onFinalize(content);
+      onFinalize(content, title);
     } else if (e.key === 'Escape') {
       setContent(block.content);
+      setTitle(block.title || '');
+      onEdit();
+    }
+  };
+
+  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      textareaRef.current?.focus();
+    } else if (e.key === 'Escape') {
+      setTitle(block.title || '');
       onEdit();
     }
   };
@@ -170,11 +191,11 @@ export function NotebookBlock({
       .replace(/^- (.*$)/gm, '<li class="ml-4 list-disc">$1</li>')
       .replace(/^(\d+)\. (.*$)/gm, '<li class="ml-4 list-decimal">$2</li>')
       .replace(/^> (.*$)/gm, '<blockquote class="border-l-4 border-gray-300 pl-4 italic">$1</blockquote>')
-      .replace(/```mermaid\n([\s\S]*?)\n```/g, '<div class="bg-muted p-4 rounded-md font-mono text-sm">Mermaid Diagram: $1</div>')
-      .replace(/```([\s\S]*?)```/g, '<pre class="bg-muted p-4 rounded-md font-mono text-sm overflow-x-auto">$1</pre>')
+      .replace(/```mermaid\n([\s\S]*?)\n```/g, '<div class="bg-muted p-4 rounded-md font-mono text-sm border-2 border-dashed border-blue-300"><div class="text-blue-600 font-semibold mb-2">📊 Mermaid Diagram</div><pre>$1</pre></div>')
+      .replace(/```([\s\S]*?)```/g, '<pre class="bg-muted p-4 rounded-md font-mono text-sm overflow-x-auto border">$1</pre>')
       .replace(/`([^`]+)`/g, '<code class="bg-muted px-1 py-0.5 rounded text-sm">$1</code>')
-      .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="max-w-full h-auto rounded-md my-2" />')
-      .replace(/\|([^|\n]+)\|([^|\n]+)\|([^|\n]*)\|/g, '<table class="border-collapse border border-gray-300 my-4"><tr><td class="border border-gray-300 px-2 py-1">$1</td><td class="border border-gray-300 px-2 py-1">$2</td><td class="border border-gray-300 px-2 py-1">$3</td></tr></table>')
+      .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="max-w-full h-auto rounded-md my-2 border" />')
+      .replace(/\|([^|\n]+)\|([^|\n]+)\|([^|\n]*)\|/g, '<table class="border-collapse border border-gray-300 my-4 w-full"><tr><td class="border border-gray-300 px-2 py-1">$1</td><td class="border border-gray-300 px-2 py-1">$2</td><td class="border border-gray-300 px-2 py-1">$3</td></tr></table>')
       .replace(/\n/g, '<br />');
   };
 
@@ -258,6 +279,21 @@ export function NotebookBlock({
                 onInsertImage={handleInsertImage}
                 onInsertLink={handleInsertLink}
               />
+              
+              {/* Block Title Input */}
+              <Input
+                ref={titleRef}
+                value={title}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  onTitleChange(e.target.value);
+                }}
+                onKeyDown={handleTitleKeyDown}
+                placeholder="Block title (e.g., User Login Requirements)"
+                className="border-0 border-b rounded-none focus:ring-0 font-semibold text-lg px-4 py-3 bg-blue-50/50"
+              />
+              
+              {/* Block Content */}
               <Textarea
                 ref={textareaRef}
                 value={content}
@@ -267,11 +303,11 @@ export function NotebookBlock({
                 }}
                 onKeyDown={handleKeyDown}
                 placeholder="Type your content here... Press Shift+Enter to finalize, Escape to cancel"
-                className="min-h-[120px] border-0 resize-none focus:ring-0 font-mono"
+                className="min-h-[120px] border-0 resize-none focus:ring-0 font-mono px-4"
                 style={{ minHeight: Math.max(120, content.split('\n').length * 24) + 'px' }}
               />
               <div className="absolute bottom-2 right-2 flex items-center gap-2">
-                <Button size="sm" onClick={() => onFinalize(content)}>
+                <Button size="sm" onClick={() => onFinalize(content, title)}>
                   <Play className="h-4 w-4 mr-1" />
                   Run (Shift+Enter)
                 </Button>
@@ -279,6 +315,14 @@ export function NotebookBlock({
             </div>
           ) : (
             <div className="p-4">
+              {/* Rendered Title */}
+              {block.title && (
+                <div className="mb-4 pb-2 border-b">
+                  <h2 className="text-xl font-bold text-primary">{block.title}</h2>
+                </div>
+              )}
+              
+              {/* Rendered Content */}
               {block.content ? (
                 <div 
                   className="prose prose-sm max-w-none"
