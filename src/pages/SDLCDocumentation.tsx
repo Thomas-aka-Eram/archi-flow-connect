@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -177,6 +178,8 @@ export default function SDLCDocumentation() {
     );
   }
 
+  const currentDocuments = mockDocuments[activePhase as keyof typeof mockDocuments] || [];
+
   return (
     <div className="p-6 space-y-6 h-full">
       {/* Header */}
@@ -239,7 +242,7 @@ export default function SDLCDocumentation() {
             </CardHeader>
             <CardContent>
               <DocumentTree 
-                documents={mockDocuments[activePhase as keyof typeof mockDocuments] || []}
+                documents={currentDocuments}
                 onDocumentSelect={handleDocumentSelect}
                 onBlockSelect={handleBlockSelect}
               />
@@ -257,19 +260,19 @@ export default function SDLCDocumentation() {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Documents</span>
                 <Badge variant="secondary">
-                  {mockDocuments[activePhase as keyof typeof mockDocuments]?.length || 0}
+                  {currentDocuments.length}
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Total Blocks</span>
                 <Badge variant="secondary">
-                  {mockDocuments[activePhase as keyof typeof mockDocuments]?.reduce((acc, doc) => acc + doc.blocks, 0) || 0}
+                  {currentDocuments.reduce((acc, doc) => acc + doc.blocks.length, 0)}
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Under Review</span>
+                <span className="text-sm text-muted-foreground">Draft Status</span>
                 <Badge variant="outline">
-                  {mockDocuments[activePhase as keyof typeof mockDocuments]?.filter(doc => doc.status === 'review').length || 0}
+                  {currentDocuments.filter(doc => doc.status === 'draft').length}
                 </Badge>
               </div>
             </CardContent>
