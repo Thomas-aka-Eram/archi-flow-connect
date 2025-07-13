@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -25,7 +24,7 @@ export function HierarchicalTagPicker({
   onTagsChange,
   currentPhase 
 }: HierarchicalTagPickerProps) {
-  const { tags, getTagHierarchy, addTag, getTagColor, getTagsByPhase } = useTagsDomains();
+  const { tags, getTagHierarchy, addTag, getTagColor, getTagsByPhase, getTagDisplayName, getTagTooltip } = useTagsDomains();
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [newTagName, setNewTagName] = useState('');
   const [newTagColor, setNewTagColor] = useState('#3B82F6');
@@ -76,17 +75,20 @@ export function HierarchicalTagPicker({
       .map(tag => {
         const hasChildren = tag.children.length > 0;
         const isExpanded = expandedNodes.has(tag.id);
-        const isSelected = selectedTags.includes(tag.name);
+        const displayName = getTagDisplayName(tag.id);
+        const isSelected = selectedTags.includes(displayName);
         const childTags = tags.filter(t => tag.children.includes(t.id));
         const tagColor = getTagColor(tag.id);
+        const tooltip = getTagTooltip(tag.id);
 
         return (
           <div key={tag.id} className="select-none">
             <div 
-              className={`flex items-center gap-2 py-2 px-3 hover:bg-accent rounded cursor-pointer transition-colors ${
+              className={`flex items-center gap-2 py-2 px-3 hover:bg-accent rounded cursor-pointer transition-colors group ${
                 isSelected ? 'bg-accent/50' : ''
               }`}
-              style={{ marginLeft: `${level * 20}px` }}
+              style={{ marginLeft: `${level * 16}px` }}
+              title={tooltip}
             >
               {hasChildren ? (
                 <button
@@ -108,12 +110,13 @@ export function HierarchicalTagPicker({
                 style={{ backgroundColor: tagColor }}
               />
               
-              <span 
-                className="flex-1 text-sm hover:text-primary transition-colors"
+              <Badge
+                variant="compact"
+                className="flex-1 cursor-pointer font-mono text-xs"
                 onClick={() => handleTagSelect(tag.id)}
               >
-                {tag.name}
-              </span>
+                {displayName}
+              </Badge>
 
               {tag.phase && (
                 <Badge variant="outline" className="text-xs px-1 py-0">
@@ -191,18 +194,23 @@ export function HierarchicalTagPicker({
               <Label className="text-sm font-medium">Selected Tags</Label>
               <div className="flex flex-wrap gap-2 mt-2 p-3 border rounded-lg min-h-[100px] max-h-60 overflow-y-auto">
                 {selectedTags.map((tagName) => {
-                  const tag = tags.find(t => t.name === tagName);
+                  const tag = tags.find(t => getTagDisplayName(t.id) === tagName);
                   const tagColor = tag ? getTagColor(tag.id) : '#6B7280';
                   
                   return (
-                    <Badge key={tagName} variant="secondary" className="gap-2">
+                    <Badge 
+                      key={tagName} 
+                      variant="secondary" 
+                      className="gap-2 font-mono text-xs max-w-full"
+                      title={tag ? getTagTooltip(tag.id) : ''}
+                    >
                       <div 
-                        className="w-2 h-2 rounded-full"
+                        className="w-2 h-2 rounded-full flex-shrink-0"
                         style={{ backgroundColor: tagColor }}
                       />
-                      {tagName}
+                      <span className="truncate">{tagName}</span>
                       <X 
-                        className="h-3 w-3 cursor-pointer hover:text-destructive" 
+                        className="h-3 w-3 cursor-pointer hover:text-destructive flex-shrink-0" 
                         onClick={() => handleTagRemove(tagName)}
                       />
                     </Badge>

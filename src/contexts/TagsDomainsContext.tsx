@@ -7,6 +7,7 @@ export interface Tag {
   parent?: string;
   children: string[];
   phase?: string;
+  depth: number;
 }
 
 interface TagsDomainsContextType {
@@ -86,30 +87,42 @@ const softenColor = (color: string, level: number): string => {
   return `#${toHex(r2)}${toHex(g2)}${toHex(b2)}`;
 };
 
+// Helper function to generate depth prefix
+const getDepthPrefix = (depth: number): string => {
+  if (depth === 0) return '#';
+  return '#' + '>'.repeat(depth);
+};
+
+// Helper function to get display name with depth prefix
+const getDisplayName = (name: string, depth: number): string => {
+  const cleanName = name.startsWith('#') ? name.slice(1) : name;
+  return `${getDepthPrefix(depth)}${cleanName}`;
+};
+
 const defaultTags: Tag[] = [
-  { id: 'auth', name: '#authentication', color: '#3B82F6', children: ['login', 'signup', 'oauth', 'password'], phase: 'requirements' },
-  { id: 'login', name: '#login', color: '#60A5FA', parent: 'auth', children: [], phase: 'requirements' },
-  { id: 'signup', name: '#signup', color: '#60A5FA', parent: 'auth', children: [], phase: 'requirements' },
-  { id: 'oauth', name: '#oauth', color: '#60A5FA', parent: 'auth', children: ['google-oauth', 'github-oauth'], phase: 'requirements' },
-  { id: 'google-oauth', name: '#google-oauth', color: '#93C5FD', parent: 'oauth', children: [], phase: 'development' },
-  { id: 'github-oauth', name: '#github-oauth', color: '#93C5FD', parent: 'oauth', children: [], phase: 'development' },
-  { id: 'password', name: '#password', color: '#60A5FA', parent: 'auth', children: ['reset', 'hash'], phase: 'requirements' },
-  { id: 'reset', name: '#password-reset', color: '#93C5FD', parent: 'password', children: [], phase: 'development' },
-  { id: 'hash', name: '#password-hash', color: '#93C5FD', parent: 'password', children: [], phase: 'development' },
-  { id: 'ui', name: '#ui', color: '#8B5CF6', children: ['forms', 'navigation', 'layout'], phase: 'design' },
-  { id: 'forms', name: '#forms', color: '#A78BFA', parent: 'ui', children: [], phase: 'design' },
-  { id: 'navigation', name: '#navigation', color: '#A78BFA', parent: 'ui', children: [], phase: 'design' },
-  { id: 'layout', name: '#layout', color: '#A78BFA', parent: 'ui', children: [], phase: 'design' },
-  { id: 'api', name: '#api', color: '#10B981', children: ['rest', 'graphql'], phase: 'development' },
-  { id: 'rest', name: '#rest-api', color: '#34D399', parent: 'api', children: [], phase: 'development' },
-  { id: 'graphql', name: '#graphql', color: '#34D399', parent: 'api', children: [], phase: 'development' },
-  { id: 'database', name: '#database', color: '#F59E0B', children: ['schema', 'migration'], phase: 'development' },
-  { id: 'schema', name: '#schema', color: '#FBBF24', parent: 'database', children: [], phase: 'development' },
-  { id: 'migration', name: '#migration', color: '#FBBF24', parent: 'database', children: [], phase: 'development' },
-  { id: 'testing', name: '#testing', color: '#EF4444', children: ['unit', 'integration', 'e2e'], phase: 'testing' },
-  { id: 'unit', name: '#unit-testing', color: '#F87171', parent: 'testing', children: [], phase: 'testing' },
-  { id: 'integration', name: '#integration-testing', color: '#F87171', parent: 'testing', children: [], phase: 'testing' },
-  { id: 'e2e', name: '#e2e-testing', color: '#F87171', parent: 'testing', children: [], phase: 'testing' },
+  { id: 'auth', name: 'authentication', color: '#3B82F6', children: ['login', 'signup', 'oauth', 'password'], phase: 'requirements', depth: 0 },
+  { id: 'login', name: 'login', color: '#60A5FA', parent: 'auth', children: [], phase: 'requirements', depth: 1 },
+  { id: 'signup', name: 'signup', color: '#60A5FA', parent: 'auth', children: [], phase: 'requirements', depth: 1 },
+  { id: 'oauth', name: 'oauth', color: '#60A5FA', parent: 'auth', children: ['google-oauth', 'github-oauth'], phase: 'requirements', depth: 1 },
+  { id: 'google-oauth', name: 'google-oauth', color: '#93C5FD', parent: 'oauth', children: [], phase: 'development', depth: 2 },
+  { id: 'github-oauth', name: 'github-oauth', color: '#93C5FD', parent: 'oauth', children: [], phase: 'development', depth: 2 },
+  { id: 'password', name: 'password', color: '#60A5FA', parent: 'auth', children: ['reset', 'hash'], phase: 'requirements', depth: 1 },
+  { id: 'reset', name: 'password-reset', color: '#93C5FD', parent: 'password', children: [], phase: 'development', depth: 2 },
+  { id: 'hash', name: 'password-hash', color: '#93C5FD', parent: 'password', children: [], phase: 'development', depth: 2 },
+  { id: 'ui', name: 'ui', color: '#8B5CF6', children: ['forms', 'navigation', 'layout'], phase: 'design', depth: 0 },
+  { id: 'forms', name: 'forms', color: '#A78BFA', parent: 'ui', children: [], phase: 'design', depth: 1 },
+  { id: 'navigation', name: 'navigation', color: '#A78BFA', parent: 'ui', children: [], phase: 'design', depth: 1 },
+  { id: 'layout', name: 'layout', color: '#A78BFA', parent: 'ui', children: [], phase: 'design', depth: 1 },
+  { id: 'api', name: 'api', color: '#10B981', children: ['rest', 'graphql'], phase: 'development', depth: 0 },
+  { id: 'rest', name: 'rest-api', color: '#34D399', parent: 'api', children: [], phase: 'development', depth: 1 },
+  { id: 'graphql', name: 'graphql', color: '#34D399', parent: 'api', children: [], phase: 'development', depth: 1 },
+  { id: 'database', name: 'database', color: '#F59E0B', children: ['schema', 'migration'], phase: 'development', depth: 0 },
+  { id: 'schema', name: 'schema', color: '#FBBF24', parent: 'database', children: [], phase: 'development', depth: 1 },
+  { id: 'migration', name: 'migration', color: '#FBBF24', parent: 'database', children: [], phase: 'development', depth: 1 },
+  { id: 'testing', name: 'testing', color: '#EF4444', children: ['unit', 'integration', 'e2e'], phase: 'testing', depth: 0 },
+  { id: 'unit', name: 'unit-testing', color: '#F87171', parent: 'testing', children: [], phase: 'testing', depth: 1 },
+  { id: 'integration', name: 'integration-testing', color: '#F87171', parent: 'testing', children: [], phase: 'testing', depth: 1 },
+  { id: 'e2e', name: 'e2e-testing', color: '#F87171', parent: 'testing', children: [], phase: 'testing', depth: 1 },
 ];
 
 const defaultDomains = [
@@ -128,13 +141,14 @@ export function TagsDomainsProvider({ children }: { children: React.ReactNode })
   };
 
   const addTag = (name: string, color: string, parentId?: string, phase?: string) => {
-    const formattedName = name.startsWith('#') ? name : `#${name}`;
+    const cleanName = name.startsWith('#') ? name.slice(1) : name;
     const newId = `tag-${Date.now()}`;
     
-    // Auto-soften color if it's a child tag
     let finalColor = color;
+    let depth = 0;
+    
     if (parentId) {
-      const depth = getTagDepth(parentId) + 1;
+      depth = getTagDepth(parentId) + 1;
       const parentTag = tags.find(t => t.id === parentId);
       const rootColor = parentTag ? getRootColor(parentTag.id) : color;
       finalColor = softenColor(rootColor, depth);
@@ -142,11 +156,12 @@ export function TagsDomainsProvider({ children }: { children: React.ReactNode })
     
     const newTag: Tag = {
       id: newId,
-      name: formattedName,
+      name: cleanName,
       color: finalColor,
       parent: parentId,
       children: [],
-      phase
+      phase,
+      depth
     };
 
     setTags(prevTags => {
@@ -220,7 +235,8 @@ export function TagsDomainsProvider({ children }: { children: React.ReactNode })
     const tag = tags.find(t => t.id === tagId);
     if (!tag) return [];
 
-    const hierarchy: string[] = [tag.name];
+    const displayName = getDisplayName(tag.name, tag.depth);
+    const hierarchy: string[] = [displayName];
     
     if (tag.parent) {
       const parentHierarchy = getTagHierarchy(tag.parent);
@@ -231,7 +247,7 @@ export function TagsDomainsProvider({ children }: { children: React.ReactNode })
   };
 
   const getFlatTagNames = (): string[] => {
-    return tags.map(tag => tag.name);
+    return tags.map(tag => getDisplayName(tag.name, tag.depth));
   };
 
   const getTagTree = (): Tag[] => {
@@ -247,6 +263,24 @@ export function TagsDomainsProvider({ children }: { children: React.ReactNode })
     return tags.filter(tag => tag.phase === phase);
   };
 
+  const getTagDisplayName = (tagId: string): string => {
+    const tag = tags.find(t => t.id === tagId);
+    if (!tag) return '';
+    return getDisplayName(tag.name, tag.depth);
+  };
+
+  const getTagTooltip = (tagId: string): string => {
+    const tag = tags.find(t => t.id === tagId);
+    if (!tag) return '';
+    
+    if (tag.parent) {
+      const parentTag = tags.find(t => t.id === tag.parent);
+      return `Child of ${getDisplayName(parentTag?.name || '', parentTag?.depth || 0)} • Depth: ${tag.depth}`;
+    }
+    
+    return `Root tag • Depth: ${tag.depth}`;
+  };
+
   return (
     <TagsDomainsContext.Provider value={{
       tags,
@@ -260,7 +294,9 @@ export function TagsDomainsProvider({ children }: { children: React.ReactNode })
       getFlatTagNames,
       getTagTree,
       getTagColor,
-      getTagsByPhase
+      getTagsByPhase,
+      getTagDisplayName,
+      getTagTooltip
     }}>
       {children}
     </TagsDomainsContext.Provider>
