@@ -18,6 +18,7 @@ import Notifications from '@/pages/Notifications';
 import Settings from '@/pages/Settings';
 import Calendar from '@/pages/Calendar';
 import Reports from '@/pages/Reports';
+import Analytics from '@/pages/Analytics';
 import LandingPage from '@/pages/LandingPage';
 import Login from '@/pages/Login';
 import Signup from '@/pages/Signup';
@@ -43,6 +44,7 @@ function App() {
                   <Layout>
                     <Routes>
                       <Route path="/" element={<Dashboard />} />
+                      <Route path="/analytics" element={<Analytics />} />
                       <Route path="/manage" element={<ProjectManagement />} />
                       <Route path="/sdlc" element={<SDLCDocumentation />} />
                       <Route path="/tasks" element={<TaskManagement />} />

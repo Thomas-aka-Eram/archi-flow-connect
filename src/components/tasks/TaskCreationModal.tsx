@@ -37,9 +37,11 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
     { value: 'carlos', name: 'Carlos', skills: ['DevOps', 'Backend'], availability: 60 }
   ];
 
-  const handleAddTag = (tag: string) => {
-    if (!selectedTags.includes(tag)) {
-      setSelectedTags([...selectedTags, tag]);
+  const flatTags = availableTags.map(tag => tag.name);
+
+  const handleAddTag = (tagName: string) => {
+    if (!selectedTags.includes(tagName)) {
+      setSelectedTags([...selectedTags, tagName]);
     }
   };
 
@@ -199,7 +201,7 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
               <div className="space-y-2">
                 <span className="text-sm text-muted-foreground">Available Tags</span>
                 <div className="flex flex-wrap gap-1">
-                  {availableTags
+                  {flatTags
                     .filter(tag => !selectedTags.includes(tag))
                     .map((tag) => (
                       <Badge 

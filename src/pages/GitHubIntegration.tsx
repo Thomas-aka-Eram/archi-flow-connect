@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,10 +15,24 @@ import {
   Settings,
   RefreshCw,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Gitlab
 } from "lucide-react";
 import { CommitExplorer } from "@/components/github/CommitExplorer";
 import { CommitModal } from "@/components/github/CommitModal";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const vcsProviders = [
+  { id: 'github', name: 'GitHub', icon: Github, color: 'text-gray-900' },
+  { id: 'gitlab', name: 'GitLab', icon: Gitlab, color: 'text-orange-600' },
+  { id: 'bitbucket', name: 'Bitbucket', icon: GitBranch, color: 'text-blue-600' },
+];
 
 const mockCommits = [
   {
@@ -53,12 +68,15 @@ const mockCommits = [
 ];
 
 export default function GitHubIntegration() {
+  const [selectedProvider, setSelectedProvider] = useState('github');
   const [isConnected, setIsConnected] = useState(true);
   const [repoUrl, setRepoUrl] = useState('https://github.com/org/ecommerce-auth');
   const [selectedCommit, setSelectedCommit] = useState<string | null>(null);
 
+  const currentProvider = vcsProviders.find(p => p.id === selectedProvider);
+
   const handleConnect = () => {
-    console.log('Connecting to GitHub...');
+    console.log(`Connecting to ${currentProvider?.name}...`);
     setIsConnected(true);
   };
 
@@ -75,7 +93,7 @@ export default function GitHubIntegration() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">GitHub Integration</h1>
+          <h1 className="text-3xl font-bold">Version Control Integration</h1>
           <p className="text-muted-foreground mt-1">
             Connect code commits with documentation and tasks
           </p>
@@ -92,11 +110,11 @@ export default function GitHubIntegration() {
         </div>
       </div>
 
-      {/* Connection Status */}
+      {/* Provider Selection & Connection */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-3">
-            <Github className="h-5 w-5" />
+            {currentProvider && <currentProvider.icon className="h-5 w-5" />}
             Repository Connection
             {isConnected ? (
               <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-500/20">
@@ -115,17 +133,35 @@ export default function GitHubIntegration() {
           {!isConnected ? (
             <div className="space-y-4">
               <div>
+                <Label>Version Control Provider</Label>
+                <Select value={selectedProvider} onValueChange={setSelectedProvider}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select provider" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {vcsProviders.map((provider) => (
+                      <SelectItem key={provider.id} value={provider.id}>
+                        <div className="flex items-center gap-2">
+                          <provider.icon className={`h-4 w-4 ${provider.color}`} />
+                          {provider.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
                 <Label htmlFor="repo-url">Repository URL</Label>
                 <Input
                   id="repo-url"
                   value={repoUrl}
                   onChange={(e) => setRepoUrl(e.target.value)}
-                  placeholder="https://github.com/username/repository"
+                  placeholder={`https://${selectedProvider}.com/username/repository`}
                 />
               </div>
               <Button onClick={handleConnect}>
-                <Github className="h-4 w-4 mr-2" />
-                Connect Repository
+                {currentProvider && <currentProvider.icon className="h-4 w-4 mr-2" />}
+                Connect to {currentProvider?.name}
               </Button>
             </div>
           ) : (
@@ -137,12 +173,18 @@ export default function GitHubIntegration() {
                   <p className="text-sm text-muted-foreground">Last sync: 5 minutes ago</p>
                 </div>
               </div>
-              <Button variant="outline" size="sm" asChild>
-                <a href={repoUrl} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  View on GitHub
-                </a>
-              </Button>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="flex items-center gap-1">
+                  {currentProvider && <currentProvider.icon className="h-3 w-3" />}
+                  {currentProvider?.name}
+                </Badge>
+                <Button variant="outline" size="sm" asChild>
+                  <a href={repoUrl} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    View Repository
+                  </a>
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
