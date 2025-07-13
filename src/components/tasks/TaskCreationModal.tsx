@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { X, Plus } from "lucide-react";
+import { X, Tag as TagIcon } from "lucide-react";
 import { useTagsDomains } from "@/contexts/TagsDomainsContext";
+import { HierarchicalTagPicker } from "@/components/sdlc/HierarchicalTagPicker";
 
 interface TaskCreationModalProps {
   isOpen: boolean;
@@ -16,7 +17,7 @@ interface TaskCreationModalProps {
 }
 
 export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
-  const { tags: availableTags, domains: availableDomains } = useTagsDomains();
+  const { domains: availableDomains, getTagColor, tags } = useTagsDomains();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -29,6 +30,7 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
     dueDate: ''
   });
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [showTagPicker, setShowTagPicker] = useState(false);
 
   const teamMembers = [
     { value: 'luis', name: 'Luis', skills: ['React', 'Node.js'], availability: 90 },
@@ -36,14 +38,6 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
     { value: 'aisha', name: 'Aisha', skills: ['UI/UX', 'Frontend'], availability: 75 },
     { value: 'carlos', name: 'Carlos', skills: ['DevOps', 'Backend'], availability: 60 }
   ];
-
-  const flatTags = availableTags.map(tag => tag.name);
-
-  const handleAddTag = (tagName: string) => {
-    if (!selectedTags.includes(tagName)) {
-      setSelectedTags([...selectedTags, tagName]);
-    }
-  };
 
   const handleRemoveTag = (tagToRemove: string) => {
     setSelectedTags(selectedTags.filter(tag => tag !== tagToRemove));
@@ -55,195 +49,220 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Create New Task</DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create New Task</DialogTitle>
+          </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Basic Information */}
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="title">Task Title</Label>
-              <Input
-                id="title"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="Enter task title..."
-              />
+          <div className="space-y-6">
+            {/* Basic Information */}
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="title">Task Title</Label>
+                <Input
+                  id="title"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="Enter task title..."
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Describe the task..."
+                  rows={3}
+                />
+              </div>
             </div>
 
-            <div>
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Describe the task..."
-                rows={3}
-              />
-            </div>
-          </div>
-
-          {/* Assignment & Priority */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Assignee</Label>
-              <Select value={formData.assignee} onValueChange={(value) => setFormData({ ...formData, assignee: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select team member" />
-                </SelectTrigger>
-                <SelectContent>
-                  {teamMembers.map((member) => (
-                    <SelectItem key={member.value} value={member.value}>
-                      <div className="flex items-center justify-between w-full">
-                        <span>{member.name}</span>
-                        <Badge variant="outline" className="ml-2 text-xs">
-                          {member.availability}% available
-                        </Badge>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label>Priority</Label>
-              <Select value={formData.priority} onValueChange={(value) => setFormData({ ...formData, priority: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="HIGH">High</SelectItem>
-                  <SelectItem value="MEDIUM">Medium</SelectItem>
-                  <SelectItem value="LOW">Low</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Phase & Domain */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>SDLC Phase</Label>
-              <Select value={formData.phase} onValueChange={(value) => setFormData({ ...formData, phase: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select phase" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="requirements">Requirements</SelectItem>
-                  <SelectItem value="design">Design</SelectItem>
-                  <SelectItem value="development">Development</SelectItem>
-                  <SelectItem value="testing">Testing</SelectItem>
-                  <SelectItem value="deployment">Deployment</SelectItem>
-                  <SelectItem value="maintenance">Maintenance</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label>Domain</Label>
-              <Select value={formData.domain} onValueChange={(value) => setFormData({ ...formData, domain: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select domain" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableDomains.map((domain) => (
-                    <SelectItem key={domain} value={domain.toLowerCase()}>
-                      {domain}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Timeline */}
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="hours">Estimated Hours</Label>
-              <Input
-                id="hours"
-                type="number"
-                value={formData.estimatedHours}
-                onChange={(e) => setFormData({ ...formData, estimatedHours: e.target.value })}
-                placeholder="8"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="milestone">Milestone</Label>
-              <Input
-                id="milestone"
-                value={formData.milestone}
-                onChange={(e) => setFormData({ ...formData, milestone: e.target.value })}
-                placeholder="Authentication System"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="dueDate">Due Date</Label>
-              <Input
-                id="dueDate"
-                type="date"
-                value={formData.dueDate}
-                onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-              />
-            </div>
-          </div>
-
-          {/* Tags */}
-          <div>
-            <Label>Tags</Label>
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <span className="text-sm text-muted-foreground">Available Tags</span>
-                <div className="flex flex-wrap gap-1">
-                  {flatTags
-                    .filter(tag => !selectedTags.includes(tag))
-                    .map((tag) => (
-                      <Badge 
-                        key={tag} 
-                        variant="outline" 
-                        className="cursor-pointer hover:bg-muted"
-                        onClick={() => handleAddTag(tag)}
-                      >
-                        {tag}
-                      </Badge>
+            {/* Assignment & Priority */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Assignee</Label>
+                <Select value={formData.assignee} onValueChange={(value) => setFormData({ ...formData, assignee: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select team member" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teamMembers.map((member) => (
+                      <SelectItem key={member.value} value={member.value}>
+                        <div className="flex items-center justify-between w-full">
+                          <span>{member.name}</span>
+                          <Badge variant="outline" className="ml-2 text-xs">
+                            {member.availability}% available
+                          </Badge>
+                        </div>
+                      </SelectItem>
                     ))}
-                </div>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Priority</Label>
+                <Select value={formData.priority} onValueChange={(value) => setFormData({ ...formData, priority: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="HIGH">High</SelectItem>
+                    <SelectItem value="MEDIUM">Medium</SelectItem>
+                    <SelectItem value="LOW">Low</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Phase & Domain */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>SDLC Phase</Label>
+                <Select value={formData.phase} onValueChange={(value) => setFormData({ ...formData, phase: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select phase" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="requirements">Requirements</SelectItem>
+                    <SelectItem value="design">Design</SelectItem>
+                    <SelectItem value="development">Development</SelectItem>
+                    <SelectItem value="testing">Testing</SelectItem>
+                    <SelectItem value="deployment">Deployment</SelectItem>
+                    <SelectItem value="maintenance">Maintenance</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Domain</Label>
+                <Select value={formData.domain} onValueChange={(value) => setFormData({ ...formData, domain: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select domain" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableDomains.map((domain) => (
+                      <SelectItem key={domain} value={domain.toLowerCase()}>
+                        {domain}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Timeline */}
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="hours">Estimated Hours</Label>
+                <Input
+                  id="hours"
+                  type="number"
+                  value={formData.estimatedHours}
+                  onChange={(e) => setFormData({ ...formData, estimatedHours: e.target.value })}
+                  placeholder="8"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="milestone">Milestone</Label>
+                <Input
+                  id="milestone"
+                  value={formData.milestone}
+                  onChange={(e) => setFormData({ ...formData, milestone: e.target.value })}
+                  placeholder="Authentication System"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="dueDate">Due Date</Label>
+                <Input
+                  id="dueDate"
+                  type="date"
+                  value={formData.dueDate}
+                  onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                />
+              </div>
+            </div>
+
+            {/* Enhanced Tags Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Tags</Label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowTagPicker(true)}
+                  className="gap-2"
+                >
+                  <TagIcon className="h-4 w-4" />
+                  Choose Tags
+                </Button>
               </div>
               
-              <div className="space-y-2">
-                <span className="text-sm text-muted-foreground">Selected Tags</span>
-                <div className="flex flex-wrap gap-1">
-                  {selectedTags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="gap-1">
-                      {tag}
-                      <X 
-                        className="h-3 w-3 cursor-pointer" 
-                        onClick={() => handleRemoveTag(tag)}
-                      />
-                    </Badge>
-                  ))}
-                </div>
+              <div className="min-h-[100px] p-4 border rounded-lg bg-muted/30">
+                {selectedTags.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {selectedTags.map((tagName) => {
+                      const tag = tags.find(t => t.name === tagName);
+                      const tagColor = tag ? getTagColor(tag.id) : '#6B7280';
+                      
+                      return (
+                        <Badge key={tagName} variant="secondary" className="gap-2">
+                          <div 
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: tagColor }}
+                          />
+                          {tagName}
+                          <X 
+                            className="h-3 w-3 cursor-pointer hover:text-destructive" 
+                            onClick={() => handleRemoveTag(tagName)}
+                          />
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground py-8">
+                    <TagIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>No tags selected</p>
+                    <p className="text-xs">Click "Choose Tags" to add hierarchical tags</p>
+                  </div>
+                )}
               </div>
+              
+              {selectedTags.length > 0 && (
+                <div className="text-xs text-muted-foreground">
+                  <p>• Selected tags include their parent hierarchy automatically</p>
+                  <p>• Colors indicate tag hierarchy and phase relationships</p>
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button onClick={handleSubmit}>
+                Create Task
+              </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit}>
-              Create Task
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+      <HierarchicalTagPicker
+        isOpen={showTagPicker}
+        onClose={() => setShowTagPicker(false)}
+        selectedTags={selectedTags}
+        onTagsChange={setSelectedTags}
+        currentPhase={formData.phase}
+      />
+    </>
   );
 }

@@ -1,17 +1,18 @@
-
 import React, { createContext, useContext, useState } from 'react';
 
 export interface Tag {
   id: string;
   name: string;
+  color: string;
   parent?: string;
   children: string[];
+  phase?: string;
 }
 
 interface TagsDomainsContextType {
   tags: Tag[];
   domains: string[];
-  addTag: (name: string, parentId?: string) => void;
+  addTag: (name: string, color: string, parentId?: string, phase?: string) => void;
   removeTag: (id: string) => void;
   updateTag: (id: string, updates: Partial<Tag>) => void;
   addDomain: (domain: string) => void;
@@ -19,34 +20,96 @@ interface TagsDomainsContextType {
   getTagHierarchy: (tagId: string) => string[];
   getFlatTagNames: () => string[];
   getTagTree: () => Tag[];
+  getTagColor: (tagId: string) => string;
+  getTagsByPhase: (phase: string) => Tag[];
 }
 
 const TagsDomainsContext = createContext<TagsDomainsContextType | undefined>(undefined);
 
+// Helper function to soften colors for child tags
+const softenColor = (color: string, level: number): string => {
+  // Convert hex to HSL and lighten
+  const hex = color.replace('#', '');
+  const r = parseInt(hex.substr(0, 2), 16) / 255;
+  const g = parseInt(hex.substr(2, 2), 16) / 255;
+  const b = parseInt(hex.substr(4, 2), 16) / 255;
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0, s = 0, l = 0;
+
+  l = (max + min) / 2;
+
+  if (max === min) {
+    h = s = 0;
+  } else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+
+  // Lighten based on level
+  l = Math.min(0.95, l + (level * 0.15));
+  s = Math.max(0.3, s - (level * 0.1));
+
+  // Convert back to hex
+  const hue2rgb = (p: number, q: number, t: number) => {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1/6) return p + (q - p) * 6 * t;
+    if (t < 1/2) return q;
+    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+    return p;
+  };
+
+  let r2, g2, b2;
+  if (s === 0) {
+    r2 = g2 = b2 = l;
+  } else {
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r2 = hue2rgb(p, q, h + 1/3);
+    g2 = hue2rgb(p, q, h);
+    b2 = hue2rgb(p, q, h - 1/3);
+  }
+
+  const toHex = (c: number) => {
+    const hex = Math.round(c * 255).toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  };
+
+  return `#${toHex(r2)}${toHex(g2)}${toHex(b2)}`;
+};
+
 const defaultTags: Tag[] = [
-  { id: 'auth', name: '#authentication', children: ['login', 'signup', 'oauth', 'password'] },
-  { id: 'login', name: '#login', parent: 'auth', children: [] },
-  { id: 'signup', name: '#signup', parent: 'auth', children: [] },
-  { id: 'oauth', name: '#oauth', parent: 'auth', children: ['google-oauth', 'github-oauth'] },
-  { id: 'google-oauth', name: '#google-oauth', parent: 'oauth', children: [] },
-  { id: 'github-oauth', name: '#github-oauth', parent: 'oauth', children: [] },
-  { id: 'password', name: '#password', parent: 'auth', children: ['reset', 'hash'] },
-  { id: 'reset', name: '#password-reset', parent: 'password', children: [] },
-  { id: 'hash', name: '#password-hash', parent: 'password', children: [] },
-  { id: 'ui', name: '#ui', children: ['forms', 'navigation', 'layout'] },
-  { id: 'forms', name: '#forms', parent: 'ui', children: [] },
-  { id: 'navigation', name: '#navigation', parent: 'ui', children: [] },
-  { id: 'layout', name: '#layout', parent: 'ui', children: [] },
-  { id: 'api', name: '#api', children: ['rest', 'graphql'] },
-  { id: 'rest', name: '#rest-api', parent: 'api', children: [] },
-  { id: 'graphql', name: '#graphql', parent: 'api', children: [] },
-  { id: 'database', name: '#database', children: ['schema', 'migration'] },
-  { id: 'schema', name: '#schema', parent: 'database', children: [] },
-  { id: 'migration', name: '#migration', parent: 'database', children: [] },
-  { id: 'testing', name: '#testing', children: ['unit', 'integration', 'e2e'] },
-  { id: 'unit', name: '#unit-testing', parent: 'testing', children: [] },
-  { id: 'integration', name: '#integration-testing', parent: 'testing', children: [] },
-  { id: 'e2e', name: '#e2e-testing', parent: 'testing', children: [] },
+  { id: 'auth', name: '#authentication', color: '#3B82F6', children: ['login', 'signup', 'oauth', 'password'], phase: 'requirements' },
+  { id: 'login', name: '#login', color: '#60A5FA', parent: 'auth', children: [], phase: 'requirements' },
+  { id: 'signup', name: '#signup', color: '#60A5FA', parent: 'auth', children: [], phase: 'requirements' },
+  { id: 'oauth', name: '#oauth', color: '#60A5FA', parent: 'auth', children: ['google-oauth', 'github-oauth'], phase: 'requirements' },
+  { id: 'google-oauth', name: '#google-oauth', color: '#93C5FD', parent: 'oauth', children: [], phase: 'development' },
+  { id: 'github-oauth', name: '#github-oauth', color: '#93C5FD', parent: 'oauth', children: [], phase: 'development' },
+  { id: 'password', name: '#password', color: '#60A5FA', parent: 'auth', children: ['reset', 'hash'], phase: 'requirements' },
+  { id: 'reset', name: '#password-reset', color: '#93C5FD', parent: 'password', children: [], phase: 'development' },
+  { id: 'hash', name: '#password-hash', color: '#93C5FD', parent: 'password', children: [], phase: 'development' },
+  { id: 'ui', name: '#ui', color: '#8B5CF6', children: ['forms', 'navigation', 'layout'], phase: 'design' },
+  { id: 'forms', name: '#forms', color: '#A78BFA', parent: 'ui', children: [], phase: 'design' },
+  { id: 'navigation', name: '#navigation', color: '#A78BFA', parent: 'ui', children: [], phase: 'design' },
+  { id: 'layout', name: '#layout', color: '#A78BFA', parent: 'ui', children: [], phase: 'design' },
+  { id: 'api', name: '#api', color: '#10B981', children: ['rest', 'graphql'], phase: 'development' },
+  { id: 'rest', name: '#rest-api', color: '#34D399', parent: 'api', children: [], phase: 'development' },
+  { id: 'graphql', name: '#graphql', color: '#34D399', parent: 'api', children: [], phase: 'development' },
+  { id: 'database', name: '#database', color: '#F59E0B', children: ['schema', 'migration'], phase: 'development' },
+  { id: 'schema', name: '#schema', color: '#FBBF24', parent: 'database', children: [], phase: 'development' },
+  { id: 'migration', name: '#migration', color: '#FBBF24', parent: 'database', children: [], phase: 'development' },
+  { id: 'testing', name: '#testing', color: '#EF4444', children: ['unit', 'integration', 'e2e'], phase: 'testing' },
+  { id: 'unit', name: '#unit-testing', color: '#F87171', parent: 'testing', children: [], phase: 'testing' },
+  { id: 'integration', name: '#integration-testing', color: '#F87171', parent: 'testing', children: [], phase: 'testing' },
+  { id: 'e2e', name: '#e2e-testing', color: '#F87171', parent: 'testing', children: [], phase: 'testing' },
 ];
 
 const defaultDomains = [
@@ -58,21 +121,37 @@ export function TagsDomainsProvider({ children }: { children: React.ReactNode })
   const [tags, setTags] = useState<Tag[]>(defaultTags);
   const [domains, setDomains] = useState<string[]>(defaultDomains);
 
-  const addTag = (name: string, parentId?: string) => {
+  const getTagDepth = (tagId: string): number => {
+    const tag = tags.find(t => t.id === tagId);
+    if (!tag || !tag.parent) return 0;
+    return 1 + getTagDepth(tag.parent);
+  };
+
+  const addTag = (name: string, color: string, parentId?: string, phase?: string) => {
     const formattedName = name.startsWith('#') ? name : `#${name}`;
     const newId = `tag-${Date.now()}`;
+    
+    // Auto-soften color if it's a child tag
+    let finalColor = color;
+    if (parentId) {
+      const depth = getTagDepth(parentId) + 1;
+      const parentTag = tags.find(t => t.id === parentId);
+      const rootColor = parentTag ? getRootColor(parentTag.id) : color;
+      finalColor = softenColor(rootColor, depth);
+    }
     
     const newTag: Tag = {
       id: newId,
       name: formattedName,
+      color: finalColor,
       parent: parentId,
-      children: []
+      children: [],
+      phase
     };
 
     setTags(prevTags => {
       const updatedTags = [...prevTags, newTag];
       
-      // Update parent's children array if parentId is provided
       if (parentId) {
         return updatedTags.map(tag => 
           tag.id === parentId 
@@ -85,19 +164,24 @@ export function TagsDomainsProvider({ children }: { children: React.ReactNode })
     });
   };
 
+  const getRootColor = (tagId: string): string => {
+    const tag = tags.find(t => t.id === tagId);
+    if (!tag) return '#6B7280';
+    if (!tag.parent) return tag.color;
+    return getRootColor(tag.parent);
+  };
+
   const removeTag = (id: string) => {
     setTags(prevTags => {
       const tagToRemove = prevTags.find(t => t.id === id);
       if (!tagToRemove) return prevTags;
 
-      // Remove from parent's children array
       let updatedTags = prevTags.map(tag => 
         tag.children.includes(id)
           ? { ...tag, children: tag.children.filter(childId => childId !== id) }
           : tag
       );
 
-      // Remove the tag and all its descendants
       const getDescendants = (tagId: string): string[] => {
         const tag = updatedTags.find(t => t.id === tagId);
         if (!tag) return [];
@@ -132,7 +216,6 @@ export function TagsDomainsProvider({ children }: { children: React.ReactNode })
     setDomains(domains.filter(d => d !== domain));
   };
 
-  // Get all parent tags for a given tag (including the tag itself)
   const getTagHierarchy = (tagId: string): string[] => {
     const tag = tags.find(t => t.id === tagId);
     if (!tag) return [];
@@ -152,7 +235,16 @@ export function TagsDomainsProvider({ children }: { children: React.ReactNode })
   };
 
   const getTagTree = (): Tag[] => {
-    return tags.filter(tag => !tag.parent); // Return only root tags
+    return tags.filter(tag => !tag.parent);
+  };
+
+  const getTagColor = (tagId: string): string => {
+    const tag = tags.find(t => t.id === tagId);
+    return tag?.color || '#6B7280';
+  };
+
+  const getTagsByPhase = (phase: string): Tag[] => {
+    return tags.filter(tag => tag.phase === phase);
   };
 
   return (
@@ -166,7 +258,9 @@ export function TagsDomainsProvider({ children }: { children: React.ReactNode })
       removeDomain,
       getTagHierarchy,
       getFlatTagNames,
-      getTagTree
+      getTagTree,
+      getTagColor,
+      getTagsByPhase
     }}>
       {children}
     </TagsDomainsContext.Provider>

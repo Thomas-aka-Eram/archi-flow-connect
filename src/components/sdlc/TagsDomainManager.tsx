@@ -4,20 +4,29 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, X, Tag, Settings, ChevronRight, ChevronDown } from "lucide-react";
 import { useTagsDomains } from "@/contexts/TagsDomainsContext";
+import { ColorPicker } from "./ColorPicker";
 
 export function TagsDomainManager() {
-  const { tags, domains, addTag, removeTag, addDomain, removeDomain } = useTagsDomains();
+  const { tags, domains, addTag, removeTag, addDomain, removeDomain, getTagColor } = useTagsDomains();
   const [newDomain, setNewDomain] = useState('');
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['auth', 'ui', 'api', 'database', 'testing']));
   const [newTagName, setNewTagName] = useState('');
+  const [newTagColor, setNewTagColor] = useState('#3B82F6');
+  const [newTagPhase, setNewTagPhase] = useState('');
   const [selectedParent, setSelectedParent] = useState<string | undefined>();
+
+  const phases = ['requirements', 'design', 'development', 'testing', 'deployment', 'maintenance'];
 
   const handleAddTag = () => {
     if (newTagName.trim()) {
-      addTag(newTagName.trim(), selectedParent);
+      addTag(newTagName.trim(), newTagColor, selectedParent, newTagPhase);
       setNewTagName('');
+      setNewTagColor('#3B82F6');
+      setNewTagPhase('');
       setSelectedParent(undefined);
     }
   };
@@ -44,17 +53,18 @@ export function TagsDomainManager() {
       const hasChildren = tag.children.length > 0;
       const isExpanded = expandedNodes.has(tag.id);
       const childTags = tags.filter(t => tag.children.includes(t.id));
+      const tagColor = getTagColor(tag.id);
 
       return (
         <div key={tag.id} className="select-none">
           <div 
-            className="flex items-center gap-2 py-1 px-2 hover:bg-accent rounded group"
+            className="flex items-center gap-2 py-2 px-2 hover:bg-accent rounded group transition-colors"
             style={{ marginLeft: `${level * 20}px` }}
           >
             {hasChildren ? (
               <button
                 onClick={() => toggleNode(tag.id)}
-                className="p-0.5 hover:bg-accent-foreground/10 rounded"
+                className="p-0.5 hover:bg-accent-foreground/10 rounded transition-colors"
               >
                 {isExpanded ? (
                   <ChevronDown className="h-3 w-3" />
@@ -66,10 +76,18 @@ export function TagsDomainManager() {
               <div className="w-4" />
             )}
             
-            <Badge variant="secondary" className="gap-1 flex-1">
+            <div 
+              className="w-3 h-3 rounded-full border border-border"
+              style={{ backgroundColor: tagColor }}
+            />
+            
+            <Badge variant="secondary" className="gap-2 flex-1">
               {tag.name}
+              {tag.phase && (
+                <span className="text-xs opacity-60">({tag.phase})</span>
+              )}
               <X 
-                className="h-3 w-3 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity" 
+                className="h-3 w-3 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive" 
                 onClick={() => removeTag(tag.id)}
               />
             </Badge>
@@ -107,27 +125,57 @@ export function TagsDomainManager() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Input
-              placeholder="Add new tag..."
-              value={newTagName}
-              onChange={(e) => setNewTagName(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
-              className="flex-1"
-            />
-            {selectedParent && (
-              <Badge variant="outline" className="gap-1">
-                Parent: {tags.find(t => t.id === selectedParent)?.name}
-                <X 
-                  className="h-3 w-3 cursor-pointer" 
-                  onClick={() => setSelectedParent(undefined)}
-                />
-              </Badge>
-            )}
-            <Button onClick={handleAddTag} size="sm" disabled={!newTagName.trim()}>
-              <Plus className="h-4 w-4" />
-            </Button>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <Label>Tag Name</Label>
+              <Input
+                placeholder="Add new tag..."
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
+              />
+            </div>
+            
+            <div className="space-y-3">
+              <Label>SDLC Phase</Label>
+              <Select value={newTagPhase} onValueChange={setNewTagPhase}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select phase (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {phases.map(phase => (
+                    <SelectItem key={phase} value={phase}>
+                      {phase.charAt(0).toUpperCase() + phase.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+
+          <div className="space-y-3">
+            <Label>Color {selectedParent && "(auto-generated for child tags)"}</Label>
+            <ColorPicker
+              selectedColor={newTagColor}
+              onColorSelect={setNewTagColor}
+              disabled={!!selectedParent}
+            />
+          </div>
+
+          {selectedParent && (
+            <Badge variant="outline" className="gap-1">
+              Parent: {tags.find(t => t.id === selectedParent)?.name}
+              <X 
+                className="h-3 w-3 cursor-pointer" 
+                onClick={() => setSelectedParent(undefined)}
+              />
+            </Badge>
+          )}
+
+          <Button onClick={handleAddTag} disabled={!newTagName.trim()} className="w-full">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Tag
+          </Button>
           
           <div className="border rounded-lg p-3 max-h-80 overflow-y-auto">
             <div className="space-y-1">
@@ -135,9 +183,10 @@ export function TagsDomainManager() {
             </div>
           </div>
           
-          <div className="text-xs text-muted-foreground">
+          <div className="text-xs text-muted-foreground space-y-1">
             <p>• Click the + button next to a tag to add a child tag</p>
-            <p>• Selecting a child tag automatically includes all parent tags</p>
+            <p>• Child tags automatically inherit softened colors from parents</p>
+            <p>• Selecting a child tag includes all parent tags automatically</p>
             <p>• Use the expand/collapse arrows to navigate the hierarchy</p>
           </div>
         </CardContent>
