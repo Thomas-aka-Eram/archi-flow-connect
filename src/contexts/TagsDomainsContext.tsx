@@ -23,6 +23,8 @@ interface TagsDomainsContextType {
   getTagTree: () => Tag[];
   getTagColor: (tagId: string) => string;
   getTagsByPhase: (phase: string) => Tag[];
+  getTagDisplayName: (tagId: string) => string;
+  getTagTooltip: (tagId: string) => string;
 }
 
 const TagsDomainsContext = createContext<TagsDomainsContextType | undefined>(undefined);
