@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { User, Settings as SettingsIcon, Database, GitBranch, Download, Shield } from "lucide-react";
 import { UserProfileSettings } from "@/components/settings/UserProfileSettings";
+import { ThemeCustomization } from "@/components/settings/ThemeCustomization";
 import { useProject } from "@/contexts/ProjectContext";
 
 export default function Settings() {
@@ -33,10 +34,14 @@ export default function Settings() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="profile" className="gap-2">
             <User className="h-4 w-4" />
             Profile
+          </TabsTrigger>
+          <TabsTrigger value="appearance" className="gap-2">
+            <SettingsIcon className="h-4 w-4" />
+            Appearance
           </TabsTrigger>
           <TabsTrigger value="project" disabled={!canManageProject} className="gap-2">
             <SettingsIcon className="h-4 w-4" />
@@ -54,6 +59,10 @@ export default function Settings() {
 
         <TabsContent value="profile" className="space-y-6">
           <UserProfileSettings />
+        </TabsContent>
+
+        <TabsContent value="appearance" className="space-y-6">
+          <ThemeCustomization canCustomize={canManageProject} />
         </TabsContent>
 
         <TabsContent value="project" className="space-y-6">
