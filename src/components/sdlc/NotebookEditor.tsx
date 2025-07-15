@@ -13,6 +13,7 @@ interface Block {
   domain: 'UI' | 'API' | 'DB' | 'GENERAL';
   connections: string[];
   comments: number;
+  title?: string;
 }
 
 interface NotebookEditorProps {
@@ -42,7 +43,8 @@ The system must support secure user authentication with the following capabiliti
       tags: ['#authentication', '#login', '#security'],
       domain: 'API',
       connections: ['block-design-1'],
-      comments: 3
+      comments: 3,
+      title: 'User Login Requirements'
     },
     {
       id: 'block-2',
@@ -60,12 +62,14 @@ The system must support secure user authentication with the following capabiliti
       tags: ['#authentication', '#password'],
       domain: 'API',
       connections: [],
-      comments: 1
+      comments: 1,
+      title: 'Password Recovery User Story'
     }
   ]);
 
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [editingBlockId, setEditingBlockId] = useState<string | null>('block-2');
+  const [newlyCreatedBlockId, setNewlyCreatedBlockId] = useState<string | null>(null);
 
   const handleBlockFinalize = (blockId: string, content: string, title?: string) => {
     setBlocks(blocks.map(block => 
@@ -74,6 +78,7 @@ The system must support secure user authentication with the following capabiliti
         : block
     ));
     setEditingBlockId(null);
+    setNewlyCreatedBlockId(null);
     
     const blockIndex = blocks.findIndex(b => b.id === blockId);
     if (blockIndex === blocks.length - 1) {
@@ -90,6 +95,7 @@ The system must support secure user authentication with the following capabiliti
   const handleBlockEdit = (blockId: string) => {
     setEditingBlockId(editingBlockId === blockId ? null : blockId);
     setSelectedBlockId(blockId);
+    setNewlyCreatedBlockId(null);
   };
 
   const handleUpdateBlock = (blockId: string, updates: Partial<Block>) => {
@@ -99,15 +105,17 @@ The system must support secure user authentication with the following capabiliti
   };
 
   const addNewBlock = (afterBlockId?: string) => {
+    const newBlockId = `block-${Date.now()}`;
     const newBlock: Block = {
-      id: `block-${Date.now()}`,
+      id: newBlockId,
       content: '',
       rendered: false,
       type: 'markdown',
       tags: [],
       domain: 'GENERAL',
       connections: [],
-      comments: 0
+      comments: 0,
+      title: ''
     };
 
     if (afterBlockId) {
@@ -119,8 +127,9 @@ The system must support secure user authentication with the following capabiliti
       setBlocks([...blocks, newBlock]);
     }
     
-    setEditingBlockId(newBlock.id);
-    setSelectedBlockId(newBlock.id);
+    setEditingBlockId(newBlockId);
+    setSelectedBlockId(newBlockId);
+    setNewlyCreatedBlockId(newBlockId);
   };
 
   const handleBlockDelete = (blockId: string) => {
@@ -128,6 +137,7 @@ The system must support secure user authentication with the following capabiliti
       setBlocks(blocks.filter(b => b.id !== blockId));
       if (selectedBlockId === blockId) setSelectedBlockId(null);
       if (editingBlockId === blockId) setEditingBlockId(null);
+      if (newlyCreatedBlockId === blockId) setNewlyCreatedBlockId(null);
     }
   };
 
@@ -142,6 +152,7 @@ The system must support secure user authentication with the following capabiliti
     if (firstEmptyBlock && !editingBlockId) {
       setEditingBlockId(firstEmptyBlock.id);
       setSelectedBlockId(firstEmptyBlock.id);
+      setNewlyCreatedBlockId(firstEmptyBlock.id);
     }
   }, []);
 
@@ -149,6 +160,7 @@ The system must support secure user authentication with the following capabiliti
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && editingBlockId) {
         setEditingBlockId(null);
+        setNewlyCreatedBlockId(null);
       }
     };
 
@@ -200,6 +212,7 @@ The system must support secure user authentication with the following capabiliti
                 block={block}
                 isSelected={selectedBlockId === block.id}
                 isEditing={editingBlockId === block.id}
+                isNewBlock={newlyCreatedBlockId === block.id}
                 onEdit={() => handleBlockEdit(block.id)}
                 onFinalize={(content, title) => handleBlockFinalize(block.id, content, title)}
                 onAddBlock={() => addNewBlock(block.id)}

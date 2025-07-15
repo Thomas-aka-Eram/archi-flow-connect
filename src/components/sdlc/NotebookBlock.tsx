@@ -43,6 +43,7 @@ interface NotebookBlockProps {
   block: Block;
   isSelected: boolean;
   isEditing: boolean;
+  isNewBlock?: boolean;
   onEdit: () => void;
   onFinalize: (content: string, title?: string) => void;
   onAddBlock: () => void;
@@ -57,6 +58,7 @@ export function NotebookBlock({
   block,
   isSelected,
   isEditing,
+  isNewBlock = false,
   onEdit,
   onFinalize,
   onAddBlock,
@@ -69,20 +71,35 @@ export function NotebookBlock({
   const [content, setContent] = useState(block.content);
   const [title, setTitle] = useState(block.title || '');
   const [showTagsModal, setShowTagsModal] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [titleFocused, setTitleFocused] = useState(false);
+  const [showTitleHint, setShowTitleHint] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Focus behavior for new blocks vs existing blocks
   useEffect(() => {
-    if (isEditing) {
-      if (!block.title && titleRef.current) {
+    if (isEditing && isNewBlock) {
+      // For new blocks, focus on title first
+      if (titleRef.current) {
         titleRef.current.focus();
-      } else if (textareaRef.current) {
+        // Add glow animation
+        titleRef.current.style.boxShadow = '0 0 0 2px hsl(var(--primary))';
+        setTimeout(() => {
+          if (titleRef.current) {
+            titleRef.current.style.boxShadow = '';
+          }
+        }, 500);
+      }
+    } else if (isEditing && !isNewBlock) {
+      // For existing blocks, focus on content
+      if (textareaRef.current) {
         textareaRef.current.focus();
         const len = textareaRef.current.value.length;
         textareaRef.current.setSelectionRange(len, len);
       }
     }
-  }, [isEditing, block.title]);
+  }, [isEditing, isNewBlock]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && e.shiftKey) {
@@ -102,7 +119,22 @@ export function NotebookBlock({
     } else if (e.key === 'Escape') {
       setTitle(block.title || '');
       onEdit();
+    } else if (e.key === 'ArrowUp' && e.metaKey) {
+      e.preventDefault();
+      // Jump to previous block's header (would need parent component implementation)
     }
+  };
+
+  const handleTitleFocus = () => {
+    setTitleFocused(true);
+    if (!title && isNewBlock) {
+      setShowTitleHint(true);
+    }
+  };
+
+  const handleTitleBlur = () => {
+    setTitleFocused(false);
+    setShowTitleHint(false);
   };
 
   const handleFormatText = (command: string, value?: string) => {
@@ -209,16 +241,24 @@ export function NotebookBlock({
     }
   };
 
+  const getCharacterCount = () => {
+    return title.length;
+  };
+
+  const maxTitleLength = 100;
+
   return (
     <>
       <Card 
         className={`mb-4 transition-all duration-200 ${
           isSelected ? 'ring-2 ring-primary shadow-md' : 'hover:shadow-sm'
-        } ${isEditing ? 'ring-2 ring-blue-500' : ''}`}
+        } ${isEditing ? 'ring-2 ring-blue-500' : ''} ${isNewBlock ? 'animate-scale-in' : ''}`}
         onClick={onSelect}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
       >
         {/* Block Header */}
-        {(isSelected || !isEditing) && (
+        {(isSelected || isHovered || !isEditing) && (
           <div className="flex items-center justify-between p-3 border-b bg-muted/30">
             <div className="flex items-center gap-2">
               <Badge variant="outline" className={getDomainColor(block.domain)}>
@@ -230,21 +270,37 @@ export function NotebookBlock({
                 </Badge>
               ))}
             </div>
-            <div className="flex items-center gap-1">
-              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+            <div className={`flex items-center gap-1 transition-opacity duration-200 ${
+              isHovered || isSelected ? 'opacity-100' : 'opacity-0'
+            }`}>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={(e) => { e.stopPropagation(); onEdit(); }}
+                className="group"
+              >
                 <Edit3 className="h-4 w-4" />
+                <span className="sr-only group-hover:not-sr-only ml-1 text-xs">Edit</span>
               </Button>
-              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setShowTagsModal(true); }}>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={(e) => { e.stopPropagation(); setShowTagsModal(true); }}
+                className="group"
+              >
                 <Link className="h-4 w-4" />
+                <span className="sr-only group-hover:not-sr-only ml-1 text-xs">Link</span>
               </Button>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" className="group">
                 <MessageSquare className="h-4 w-4" />
                 {block.comments > 0 && <span className="ml-1 text-xs">{block.comments}</span>}
+                <span className="sr-only group-hover:not-sr-only ml-1 text-xs">Comment</span>
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" className="group">
                     <MoreHorizontal className="h-4 w-4" />
+                    <span className="sr-only group-hover:not-sr-only ml-1 text-xs">Options</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
@@ -280,18 +336,42 @@ export function NotebookBlock({
                 onInsertLink={handleInsertLink}
               />
               
-              {/* Block Title Input */}
-              <Input
-                ref={titleRef}
-                value={title}
-                onChange={(e) => {
-                  setTitle(e.target.value);
-                  onTitleChange(e.target.value);
-                }}
-                onKeyDown={handleTitleKeyDown}
-                placeholder="Block title (e.g., User Login Requirements)"
-                className="border-0 border-b rounded-none focus:ring-0 font-semibold text-lg px-4 py-3 bg-blue-50/50"
-              />
+              {/* Enhanced Block Title Input */}
+              <div className="relative">
+                <Input
+                  ref={titleRef}
+                  value={title}
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    onTitleChange(e.target.value);
+                  }}
+                  onKeyDown={handleTitleKeyDown}
+                  onFocus={handleTitleFocus}
+                  onBlur={handleTitleBlur}
+                  placeholder="Block title (e.g., 'Login API Auth')"
+                  maxLength={maxTitleLength}
+                  className={`
+                    border-0 border-b-2 rounded-none focus:ring-0 font-semibold text-lg px-4 py-3 
+                    bg-card border-border hover:border-primary/50 focus:border-primary
+                    transition-all duration-200
+                    ${titleFocused ? 'bg-primary/5' : 'bg-muted/20'}
+                  `}
+                />
+                
+                {/* Character Counter */}
+                {titleFocused && (
+                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-muted-foreground">
+                    {getCharacterCount()}/{maxTitleLength}
+                  </div>
+                )}
+                
+                {/* Title Hint */}
+                {showTitleHint && (
+                  <div className="absolute left-4 -bottom-6 text-xs text-primary bg-primary/10 px-2 py-1 rounded animate-fade-in">
+                    Give this block a clear, meaningful title
+                  </div>
+                )}
+              </div>
               
               {/* Block Content */}
               <Textarea
@@ -303,11 +383,12 @@ export function NotebookBlock({
                 }}
                 onKeyDown={handleKeyDown}
                 placeholder="Type your content here... Press Shift+Enter to finalize, Escape to cancel"
-                className="min-h-[120px] border-0 resize-none focus:ring-0 font-mono px-4"
+                className="min-h-[120px] border-0 resize-none focus:ring-0 font-mono px-4 mt-2"
                 style={{ minHeight: Math.max(120, content.split('\n').length * 24) + 'px' }}
               />
+              
               <div className="absolute bottom-2 right-2 flex items-center gap-2">
-                <Button size="sm" onClick={() => onFinalize(content, title)}>
+                <Button size="sm" onClick={() => onFinalize(content, title)} className="bg-primary hover:bg-primary/90">
                   <Play className="h-4 w-4 mr-1" />
                   Run (Shift+Enter)
                 </Button>
@@ -318,7 +399,10 @@ export function NotebookBlock({
               {/* Rendered Title */}
               {block.title && (
                 <div className="mb-4 pb-2 border-b">
-                  <h2 className="text-xl font-bold text-primary">{block.title}</h2>
+                  <h2 className="text-xl font-bold text-primary cursor-pointer hover:text-primary/80 transition-colors" 
+                      onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+                    {block.title}
+                  </h2>
                 </div>
               )}
               
@@ -329,7 +413,8 @@ export function NotebookBlock({
                   dangerouslySetInnerHTML={{ __html: renderMarkdown(block.content) }}
                 />
               ) : (
-                <div className="text-muted-foreground italic text-center py-8">
+                <div className="text-muted-foreground italic text-center py-8 cursor-pointer hover:text-primary/70 transition-colors"
+                     onClick={(e) => { e.stopPropagation(); onEdit(); }}>
                   Empty block - click to edit
                 </div>
               )}
