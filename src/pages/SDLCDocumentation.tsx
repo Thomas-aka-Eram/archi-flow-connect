@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,27 @@ import { DocumentEditor } from "@/components/sdlc/DocumentEditor";
 import { DocumentTree } from "@/components/sdlc/DocumentTree";
 import { ExportModal } from "@/components/sdlc/ExportModal";
 import { TagsDomainManager } from "@/components/sdlc/TagsDomainManager";
+import apiClient from '@/lib/api';
+import { useToast } from "@/hooks/use-toast";
+import { useProject } from '@/contexts/ProjectContext'; // Assuming you have a project context
+
+// Define types for the data structures
+interface Document {
+  id: string;
+  title: string;
+  lastModified: string; // This might need to be createdAt or updatedAt from the API
+  blocks: Block[];
+  status: 'active' | 'draft';
+}
+
+interface Block {
+  id: string;
+  title: string;
+  tags: string[];
+  domain: string;
+  description: string;
+  lastModified: string;
+}
 
 const phases = [
   { id: 'requirements', name: 'Requirements', color: 'bg-blue-500', enabled: true },
@@ -19,115 +40,50 @@ const phases = [
   { id: 'maintenance', name: 'Maintenance', color: 'bg-gray-500', enabled: false },
 ];
 
-const mockDocuments = {
-  requirements: [
-    {
-      id: 'req-1',
-      title: 'Functional Requirements',
-      lastModified: '2024-07-10',
-      blocks: [
-        {
-          id: 'block-1',
-          title: 'User Login Requirements',
-          tags: ['#authentication', '#login', '#security'],
-          domain: 'API' as const,
-          description: 'Authentication system requirements including email/password and OAuth',
-          lastModified: '2024-07-10'
-        },
-        {
-          id: 'block-2',
-          title: 'Password Recovery',
-          tags: ['#authentication', '#password'],
-          domain: 'API' as const,
-          description: 'Password reset functionality with email verification',
-          lastModified: '2024-07-09'
-        }
-      ],
-      status: 'active' as const
-    },
-    {
-      id: 'req-2', 
-      title: 'Non-Functional Requirements',
-      lastModified: '2024-07-08',
-      blocks: [
-        {
-          id: 'block-3',
-          title: 'Performance Requirements',
-          tags: ['#performance', '#scalability'],
-          domain: 'GENERAL' as const,
-          description: 'System performance and scalability requirements',
-          lastModified: '2024-07-08'
-        }
-      ],
-      status: 'draft' as const
-    }
-  ],
-  design: [
-    {
-      id: 'des-1',
-      title: 'UI Wireframes',
-      lastModified: '2024-07-09',
-      blocks: [
-        {
-          id: 'block-4',
-          title: 'Login Page Wireframe',
-          tags: ['#ui', '#wireframe', '#login'],
-          domain: 'UI' as const,
-          description: 'Wireframe design for the login page interface',
-          lastModified: '2024-07-09'
-        }
-      ],
-      status: 'active' as const
-    }
-  ],
-  development: [
-    {
-      id: 'dev-1',
-      title: 'Implementation Guide',
-      lastModified: '2024-07-11',
-      blocks: [
-        {
-          id: 'block-5',
-          title: 'API Implementation',
-          tags: ['#api', '#implementation'],
-          domain: 'API' as const,
-          description: 'Backend API implementation guidelines',
-          lastModified: '2024-07-11'
-        }
-      ],
-      status: 'active' as const
-    }
-  ],
-  testing: [
-    {
-      id: 'test-1',
-      title: 'Test Cases',
-      lastModified: '2024-07-06',
-      blocks: [
-        {
-          id: 'block-6',
-          title: 'Login Test Cases',
-          tags: ['#testing', '#login'],
-          domain: 'GENERAL' as const,
-          description: 'Comprehensive test cases for login functionality',
-          lastModified: '2024-07-06'
-        }
-      ],
-      status: 'draft' as const
-    }
-  ]
-};
-
 export default function SDLCDocumentation() {
   const [activePhase, setActivePhase] = useState('requirements');
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [loading, setLoading] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<string | null>(null);
   const [showExportModal, setShowExportModal] = useState(false);
   const [view, setView] = useState<'overview' | 'editor' | 'config'>('overview');
+  const { currentProject } = useProject(); // Get the current project
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchDocuments = async () => {
+      if (!currentProject) return;
+
+      setLoading(true);
+      try {
+        const response = await apiClient.get(
+          `/documents/project/${currentProject.id}?phase=${activePhase}`
+        );
+        // The API returns a simpler document structure, so we map it to the frontend type
+        const formattedDocuments = response.data.map((doc: any) => ({
+          ...doc,
+          lastModified: doc.updatedAt,
+          blocks: [], // Blocks will be fetched inside the editor
+          status: 'active', // Placeholder
+        }));
+        setDocuments(formattedDocuments);
+      } catch (error: any) {
+        toast({
+          title: "Failed to fetch documents",
+          description: error.message || "Could not load documents for this phase.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDocuments();
+  }, [activePhase, currentProject, toast]);
 
   const handleBlockSelect = (docId: string, blockId: string) => {
     setSelectedDocument(docId);
     setView('editor');
-    // In real implementation, we'd also navigate to the specific block
     console.log(`Navigating to block ${blockId} in document ${docId}`);
   };
 
@@ -141,11 +97,26 @@ export default function SDLCDocumentation() {
     setSelectedDocument(null);
   };
 
-  const handleCreateDocument = () => {
-    // Create new document and open editor
-    const newDocId = `doc-${Date.now()}`;
-    setSelectedDocument(newDocId);
-    setView('editor');
+  const handleCreateDocument = async () => {
+    if (!currentProject) return;
+
+    try {
+      // For simplicity, creating a document with a default title.
+      // A modal would be better here.
+      const response = await apiClient.post(`/documents/project/${currentProject.id}`, {
+        title: `New Document in ${activePhase}`,
+        phaseId: activePhase, // Assuming phaseId is the key
+      });
+      setDocuments(prev => [...prev, response.data]);
+      setSelectedDocument(response.data.id);
+      setView('editor');
+    } catch (error: any) {
+       toast({
+        title: "Failed to create document",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   if (view === 'editor' && selectedDocument) {
@@ -177,8 +148,6 @@ export default function SDLCDocumentation() {
       </div>
     );
   }
-
-  const currentDocuments = mockDocuments[activePhase as keyof typeof mockDocuments] || [];
 
   return (
     <div className="p-6 space-y-6 h-full">
@@ -241,11 +210,15 @@ export default function SDLCDocumentation() {
               </Button>
             </CardHeader>
             <CardContent>
-              <DocumentTree 
-                documents={currentDocuments}
-                onDocumentSelect={handleDocumentSelect}
-                onBlockSelect={handleBlockSelect}
-              />
+              {loading ? (
+                <p>Loading documents...</p>
+              ) : (
+                <DocumentTree 
+                  documents={documents}
+                  onDocumentSelect={handleDocumentSelect}
+                  onBlockSelect={handleBlockSelect}
+                />
+              )}
             </CardContent>
           </Card>
         </div>
@@ -260,19 +233,19 @@ export default function SDLCDocumentation() {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Documents</span>
                 <Badge variant="secondary">
-                  {currentDocuments.length}
+                  {documents.length}
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Total Blocks</span>
                 <Badge variant="secondary">
-                  {currentDocuments.reduce((acc, doc) => acc + doc.blocks.length, 0)}
+                  {documents.reduce((acc, doc) => acc + (doc.blocks?.length || 0), 0)}
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Draft Status</span>
                 <Badge variant="outline">
-                  {currentDocuments.filter(doc => doc.status === 'draft').length}
+                  {documents.filter(doc => doc.status === 'draft').length}
                 </Badge>
               </div>
             </CardContent>

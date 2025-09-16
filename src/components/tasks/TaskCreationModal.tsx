@@ -11,6 +11,10 @@ import { X, Tag as TagIcon } from "lucide-react";
 import { useTagsDomains } from "@/contexts/TagsDomainsContext";
 import { HierarchicalTagPicker } from "@/components/sdlc/HierarchicalTagPicker";
 
+import { useProject } from '@/contexts/ProjectContext';
+import apiClient from '@/lib/api';
+import { useToast } from "@/hooks/use-toast";
+
 interface TaskCreationModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -18,6 +22,8 @@ interface TaskCreationModalProps {
 
 export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
   const { domains: availableDomains, getTagColor, tags } = useTagsDomains();
+  const { currentProject } = useProject();
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -31,6 +37,31 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
   });
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showTagPicker, setShowTagPicker] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (selectedTags.length > 0 || formData.domain) {
+        try {
+          const response = await apiClient.post('/tasks/suggestions', {
+            tags: selectedTags,
+            domainId: formData.domain,
+            estimateHours: formData.estimatedHours ? parseInt(formData.estimatedHours, 10) : undefined,
+          });
+          setSuggestions(response.data);
+        } catch (error) {
+          console.error("Failed to fetch suggestions", error);
+        }
+      }
+    };
+
+    const debounce = setTimeout(() => {
+      fetchSuggestions();
+    }, 500); // Debounce to avoid too many requests
+
+    return () => clearTimeout(debounce);
+  }, [selectedTags, formData.domain, formData.estimatedHours]);
 
   const teamMembers = [
     { value: 'luis', name: 'Luis', skills: ['React', 'Node.js'], availability: 90 },
@@ -43,9 +74,47 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
     setSelectedTags(selectedTags.filter(tag => tag !== tagToRemove));
   };
 
-  const handleSubmit = () => {
-    console.log('Creating task:', { ...formData, tags: selectedTags });
-    onClose();
+  const handleSubmit = async () => {
+    if (!currentProject) {
+      toast({
+        title: "No project selected",
+        description: "Please select a project before creating a task.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const taskPayload = {
+        title: formData.title,
+        description: formData.description,
+        assigneeId: formData.assignee,
+        priority: formData.priority,
+        phase: formData.phase,
+        domainId: formData.domain,
+        estimatedHours: formData.estimatedHours ? parseInt(formData.estimatedHours, 10) : undefined,
+        milestone: formData.milestone,
+        dueDate: formData.dueDate,
+        tags: selectedTags,
+      };
+
+      await apiClient.post(`/projects/${currentProject.id}/tasks`, taskPayload);
+
+      toast({
+        title: "Task Created",
+        description: "The new task has been added to the project.",
+      });
+      onClose();
+    } catch (error: any) {
+      toast({
+        title: "Failed to create task",
+        description: error.message || "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -90,6 +159,22 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
                     <SelectValue placeholder="Select team member" />
                   </SelectTrigger>
                   <SelectContent>
+                    {suggestions.length > 0 && (
+                      <>
+                        <Label className="px-2 py-1.5 text-sm font-semibold">Suggestions</Label>
+                        {suggestions.map((suggestion: any) => (
+                          <SelectItem key={suggestion.user.id} value={suggestion.user.id}>
+                            <div className="flex items-center justify-between w-full">
+                              <span>{suggestion.user.name}</span>
+                              <Badge variant="outline" className="ml-2 text-xs">
+                                {Math.round(suggestion.score * 100)}% match
+                              </Badge>
+                            </div>
+                          </SelectItem>
+                        ))}
+                        <hr className="my-1" />
+                      </>
+                    )}
                     {teamMembers.map((member) => (
                       <SelectItem key={member.value} value={member.value}>
                         <div className="flex items-center justify-between w-full">
@@ -248,8 +333,8 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
               <Button variant="outline" onClick={onClose}>
                 Cancel
               </Button>
-              <Button onClick={handleSubmit}>
-                Create Task
+              <Button onClick={handleSubmit} disabled={loading}>
+                {loading ? 'Creating...' : 'Create Task'}
               </Button>
             </div>
           </div>

@@ -34,31 +34,122 @@ function App() {
           <Router>
             <Routes>
               {/* Public routes */}
-              <Route path="/landing" element={<LandingPage />} />
+              <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               
               {/* Main app routes with layout */}
-              <Route path="/*" element={
-                <SidebarProvider>
-                  <Layout>
-                    <Routes>
-                      <Route path="/" element={<Dashboard />} />
-                      <Route path="/analytics" element={<Analytics />} />
-                      <Route path="/manage" element={<ProjectManagement />} />
-                      <Route path="/sdlc" element={<SDLCDocumentation />} />
-                      <Route path="/tasks" element={<TaskManagement />} />
-                      <Route path="/reviews" element={<ReviewApproval />} />
-                      <Route path="/github" element={<GitHubIntegration />} />
-                      <Route path="/calendar" element={<Calendar />} />
-                      <Route path="/reports" element={<Reports />} />
-                      <Route path="/notifications" element={<Notifications />} />
-                      <Route path="/settings" element={<Settings />} />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </Layout>
-                </SidebarProvider>
-              } />
+              <Route 
+                path="/dashboard" 
+                element={
+                  <SidebarProvider>
+                    <Layout>
+                      <Dashboard />
+                    </Layout>
+                  </SidebarProvider>
+                } 
+              />
+              <Route 
+                path="/dashboard/analytics" 
+                element={
+                  <SidebarProvider>
+                    <Layout>
+                      <Analytics />
+                    </Layout>
+                  </SidebarProvider>
+                } 
+              />
+               <Route 
+                path="/dashboard/manage" 
+                element={
+                  <SidebarProvider>
+                    <Layout>
+                      <ProjectManagement />
+                    </Layout>
+                  </SidebarProvider>
+                } 
+              />
+                <Route 
+                path="/dashboard/sdlc" 
+                element={
+                  <SidebarProvider>
+                    <Layout>
+                      <SDLCDocumentation />
+                    </Layout>
+                  </SidebarProvider>
+                } 
+              />
+              <Route 
+                path="/dashboard/tasks" 
+                element={
+                  <SidebarProvider>
+                    <Layout>
+                      <TaskManagement />
+                    </Layout>
+                  </SidebarProvider>
+                } 
+              />
+              <Route 
+                path="/dashboard/reviews" 
+                element={
+                  <SidebarProvider>
+                    <Layout>
+                      <ReviewApproval />
+                    </Layout>
+                  </SidebarProvider>
+                } 
+              />
+              <Route 
+                path="/dashboard/github" 
+                element={
+                  <SidebarProvider>
+                    <Layout>
+                      <GitHubIntegration />
+                    </Layout>
+                  </SidebarProvider>
+                } 
+              />
+              <Route 
+                path="/dashboard/calendar" 
+                element={
+                  <SidebarProvider>
+                    <Layout>
+                      <Calendar />
+                    </Layout>
+                  </SidebarProvider>
+                } 
+              />
+              <Route 
+                path="/dashboard/reports" 
+                element={
+                  <SidebarProvider>
+                    <Layout>
+                      <Reports />
+                    </Layout>
+                  </SidebarProvider>
+                } 
+              />
+              <Route 
+                path="/dashboard/notifications" 
+                element={
+                  <SidebarProvider>
+                    <Layout>
+                      <Notifications />
+                    </Layout>
+                  </SidebarProvider>
+                } 
+              />
+              <Route 
+                path="/dashboard/settings" 
+                element={
+                  <SidebarProvider>
+                    <Layout>
+                      <Settings />
+                    </Layout>
+                  </SidebarProvider>
+                } 
+              />
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </Router>
         </TagsDomainsProvider>

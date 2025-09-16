@@ -28,6 +28,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { useProject } from '@/contexts/ProjectContext';
+import apiClient from '@/lib/api';
+import { useToast } from "@/hooks/use-toast";
+
 const vcsProviders = [
   { id: 'github', name: 'GitHub', icon: Github, color: 'text-gray-900' },
   { id: 'gitlab', name: 'GitLab', icon: Gitlab, color: 'text-orange-600' },
@@ -71,13 +75,40 @@ export default function GitHubIntegration() {
   const [selectedProvider, setSelectedProvider] = useState('github');
   const [isConnected, setIsConnected] = useState(true);
   const [repoUrl, setRepoUrl] = useState('https://github.com/org/ecommerce-auth');
+  const [webhookSecret, setWebhookSecret] = useState('');
   const [selectedCommit, setSelectedCommit] = useState<string | null>(null);
+  const { currentProject } = useProject();
+  const { toast } = useToast();
 
   const currentProvider = vcsProviders.find(p => p.id === selectedProvider);
 
-  const handleConnect = () => {
-    console.log(`Connecting to ${currentProvider?.name}...`);
-    setIsConnected(true);
+  const handleConnect = async () => {
+    if (!currentProject) {
+      toast({
+        title: "No project selected",
+        description: "Please select a project before linking a repository.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await apiClient.post(`/projects/${currentProject.id}/repos`, {
+        name: repoUrl,
+        webhookSecret,
+      });
+      setIsConnected(true);
+      toast({
+        title: "Repository Linked",
+        description: "Successfully linked the repository to your project.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Failed to link repository",
+        description: error.message || "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSync = () => {
@@ -157,6 +188,15 @@ export default function GitHubIntegration() {
                   value={repoUrl}
                   onChange={(e) => setRepoUrl(e.target.value)}
                   placeholder={`https://${selectedProvider}.com/username/repository`}
+                />
+              </div>
+              <div>
+                <Label htmlFor="webhook-secret">Webhook Secret</Label>
+                <Input
+                  id="webhook-secret"
+                  value={webhookSecret}
+                  onChange={(e) => setWebhookSecret(e.target.value)}
+                  placeholder="Enter your webhook secret"
                 />
               </div>
               <Button onClick={handleConnect}>

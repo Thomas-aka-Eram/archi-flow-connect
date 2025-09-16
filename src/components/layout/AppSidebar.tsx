@@ -39,26 +39,26 @@ export function AppSidebar() {
   const [projectOverviewOpen, setProjectOverviewOpen] = useState(true);
 
   const multiProjectItems = [
-    { title: "Dashboard", url: "/", icon: LayoutDashboard, roles: ['all'] },
-    { title: "Analytics", url: "/analytics", icon: BarChart3, roles: ['PM', 'Admin'] },
-    { title: "Project Management", url: "/manage", icon: Briefcase, roles: ['PM', 'Admin'] },
+    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ['all'] },
+    { title: "Analytics", url: "/dashboard/analytics", icon: BarChart3, roles: ['PM', 'Admin'] },
+    { title: "Project Management", url: "/dashboard/manage", icon: Briefcase, roles: ['PM', 'Admin'] },
   ];
 
   const developmentItems = [
-    { title: "SDLC Docs", url: "/sdlc", icon: FileText, roles: ['all'] },
-    { title: "Tasks", url: "/tasks", icon: CheckSquare, roles: ['all'] },
-    { title: "Reviews", url: "/reviews", icon: Users, roles: ['all'] },
-    { title: "GitHub", url: "/github", icon: GitBranch, roles: ['Developer', 'PM', 'Admin'] },
+    { title: "SDLC Docs", url: "/dashboard/sdlc", icon: FileText, roles: ['all'] },
+    { title: "Tasks", url: "/dashboard/tasks", icon: CheckSquare, roles: ['all'] },
+    { title: "Reviews", url: "/dashboard/reviews", icon: Users, roles: ['all'] },
+    { title: "GitHub", url: "/dashboard/github", icon: GitBranch, roles: ['Developer', 'PM', 'Admin'] },
   ];
 
   const analyticsItems = [
-    { title: "Calendar", url: "/calendar", icon: Calendar, roles: ['all'] },
-    { title: "Reports", url: "/reports", icon: BarChart3, roles: ['PM', 'Admin'] },
+    { title: "Calendar", url: "/dashboard/calendar", icon: Calendar, roles: ['all'] },
+    { title: "Reports", url: "/dashboard/reports", icon: BarChart3, roles: ['PM', 'Admin'] },
   ];
 
   const systemItems = [
-    { title: "Notifications", url: "/notifications", icon: Bell, roles: ['all'] },
-    { title: "Settings", url: "/settings", icon: Settings, roles: ['all'] },
+    { title: "Notifications", url: "/dashboard/notifications", icon: Bell, roles: ['all'] },
+    { title: "Settings", url: "/dashboard/settings", icon: Settings, roles: ['all'] },
   ];
 
   const getNavClass = (url: string) => {

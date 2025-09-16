@@ -24,13 +24,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import apiClient from '@/lib/api'; // Import the api utility
+import { useToast } from "@/hooks/use-toast"; // Import toast for notifications
 
 export default function Signup() {
   const navigate = useNavigate();
-  const [step, setStep] = useState<'email' | 'otp' | 'profile' | 'organization'>('email');
+  const { toast } = useToast();
+  const [step, setStep] = useState<'email' | 'profile' | 'organization'>('email');
   const [formData, setFormData] = useState({
     email: '',
-    otp: '',
+    password: '', // Added password field
     name: '',
     role: '',
     organization: '',
@@ -39,40 +42,37 @@ export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleEmailSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setStep('otp');
-    }, 1000);
-  };
-
-  const handleOtpSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setStep('profile');
-    }, 1000);
-  };
-
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setStep('organization');
-    }, 1000);
+    setStep('organization');
   };
 
-  const handleOrganizationSubmit = async (e: React.FormEvent) => {
+  const handleFinalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
+
+    try {
+      await apiClient.post('/users', {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+      });
+
+      toast({
+        title: "Account Created!",
+        description: "You have successfully signed up. Please log in.",
+      });
+      navigate('/login');
+
+    } catch (error: any) {
+      toast({
+        title: "Signup Failed",
+        description: error.message || "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
       setLoading(false);
-      navigate('/');
-    }, 1000);
+    }
   };
 
   const updateFormData = (field: string, value: string) => {
@@ -98,22 +98,22 @@ export default function Signup() {
 
         {/* Progress Indicator */}
         <div className="flex items-center justify-center space-x-2">
-          {['email', 'otp', 'profile', 'organization'].map((stepName, index) => (
+          {['email', 'profile', 'organization'].map((stepName, index) => (
             <div key={stepName} className="flex items-center">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                ['email', 'otp', 'profile', 'organization'].indexOf(step) >= index
+                ['email', 'profile', 'organization'].indexOf(step) >= index
                   ? 'bg-primary text-white'
                   : 'bg-muted text-muted-foreground'
               }`}>
-                {['email', 'otp', 'profile', 'organization'].indexOf(step) > index ? (
+                {['email', 'profile', 'organization'].indexOf(step) > index ? (
                   <CheckCircle className="h-4 w-4" />
                 ) : (
                   index + 1
                 )}
               </div>
-              {index < 3 && (
+              {index < 2 && (
                 <div className={`w-8 h-px ${
-                  ['email', 'otp', 'profile', 'organization'].indexOf(step) > index
+                  ['email', 'profile', 'organization'].indexOf(step) > index
                     ? 'bg-primary'
                     : 'bg-muted'
                 }`} />
@@ -125,20 +125,14 @@ export default function Signup() {
         <Card>
           <CardHeader>
             <CardTitle className="text-center">
-              {step === 'email' && 'Enter your email'}
-              {step === 'otp' && 'Verify your email'}
+              {step === 'email' && 'Enter your credentials'}
               {step === 'profile' && 'Complete your profile'}
               {step === 'organization' && 'Join or create organization'}
             </CardTitle>
-            {step === 'otp' && (
-              <p className="text-sm text-muted-foreground text-center">
-                We've sent a 6-digit code to <strong>{formData.email}</strong>
-              </p>
-            )}
           </CardHeader>
           <CardContent>
             {step === 'email' && (
-              <form onSubmit={handleEmailSubmit} className="space-y-4">
+              <form onSubmit={() => setStep('profile')} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email address</Label>
                   <div className="relative">
@@ -154,26 +148,17 @@ export default function Signup() {
                     />
                   </div>
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Sending code...' : 'Continue'}
-                </Button>
-              </form>
-            )}
-
-            {step === 'otp' && (
-              <form onSubmit={handleOtpSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="otp">Verification Code</Label>
+                 <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      id="otp"
+                      id="password"
                       type={showPassword ? 'text' : 'password'}
-                      placeholder="Enter 6-digit code"
-                      value={formData.otp}
-                      onChange={(e) => updateFormData('otp', e.target.value)}
+                      placeholder="Enter your password"
+                      value={formData.password}
+                      onChange={(e) => updateFormData('password', e.target.value)}
                       className="pl-10 pr-10"
-                      maxLength={6}
                       required
                     />
                     <Button
@@ -187,9 +172,8 @@ export default function Signup() {
                     </Button>
                   </div>
                 </div>
-                
-                <Button type="submit" className="w-full" disabled={loading || formData.otp.length !== 6}>
-                  {loading ? 'Verifying...' : 'Verify Email'}
+                <Button type="submit" className="w-full">
+                  Continue
                 </Button>
               </form>
             )}
@@ -227,14 +211,14 @@ export default function Signup() {
                   </Select>
                 </div>
                 
-                <Button type="submit" className="w-full" disabled={loading || !formData.name || !formData.role}>
-                  {loading ? 'Saving...' : 'Continue'}
+                <Button type="submit" className="w-full" disabled={!formData.name || !formData.role}>
+                  Continue
                 </Button>
               </form>
             )}
 
             {step === 'organization' && (
-              <form onSubmit={handleOrganizationSubmit} className="space-y-4">
+              <form onSubmit={handleFinalSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="organization">Organization Name</Label>
                   <div className="relative">
@@ -286,7 +270,7 @@ export default function Signup() {
                   variant="ghost" 
                   size="sm"
                   onClick={() => {
-                    const steps = ['email', 'otp', 'profile', 'organization'];
+                    const steps = ['email', 'profile', 'organization'];
                     const currentIndex = steps.indexOf(step);
                     if (currentIndex > 0) {
                       setStep(steps[currentIndex - 1] as any);
