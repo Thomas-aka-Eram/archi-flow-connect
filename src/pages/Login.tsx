@@ -32,10 +32,14 @@ export default function Login() {
         });
         navigate('/dashboard');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      let errorMessage = "Invalid credentials.";
+      if (error && typeof error === "object" && "message" in error && typeof (error as { message?: unknown }).message === "string") {
+        errorMessage = (error as { message: string }).message;
+      }
       toast({
         title: "Login Failed",
-        description: error.message || "Invalid credentials.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

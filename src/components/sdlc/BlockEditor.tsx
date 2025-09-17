@@ -137,7 +137,7 @@ export function BlockEditor({ block, onUpdate, isPreviewMode }: BlockEditorProps
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">Domain:</span>
-              <Select value={block.domain} onValueChange={(value) => onUpdate({ domain: value as any })}>
+              <Select value={block.domain} onValueChange={(value) => onUpdate({ domain: value as Block["domain"] })}>
                 <SelectTrigger className="w-24 h-8">
                   <SelectValue />
                 </SelectTrigger>
