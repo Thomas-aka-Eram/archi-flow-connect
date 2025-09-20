@@ -1,5 +1,6 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -9,78 +10,54 @@ import { TaskList } from "@/components/tasks/TaskList";
 import { TaskModal } from "@/components/tasks/TaskModal";
 import { TaskCreationModal } from "@/components/tasks/TaskCreationModal";
 import { SmartAssignment } from "@/components/tasks/SmartAssignment";
+import apiClient from '@/lib/api';
+import { useQuery } from '@tanstack/react-query';
 
-const mockTasks = {
-  all: [
-    {
-      id: 'task-1',
-      title: 'Implement OAuth Login',
-      assignee: 'Luis',
-      status: 'IN_PROGRESS',
-      priority: 'HIGH',
-      phase: 'Development',
-      domain: 'API',
-      tags: ['#auth', '#login', '#oauth'],
-      estimatedHours: 8,
-      milestone: 'Authentication System',
-      linkedBlocks: ['req-1', 'des-1'],
-      dueDate: '2024-07-15'
-    },
-    {
-      id: 'task-2',
-      title: 'Design Password Recovery Flow',
-      assignee: 'Aisha',
-      status: 'PENDING_REVIEW',
-      priority: 'MEDIUM',
-      phase: 'Design',
-      domain: 'UI',
-      tags: ['#auth', '#password', '#recovery'],
-      estimatedHours: 4,
-      milestone: 'Authentication System',
-      linkedBlocks: ['req-2'],
-      dueDate: '2024-07-13'
-    },
-    {
-      id: 'task-3',
-      title: 'User Profile API',
-      assignee: 'Raj',
-      status: 'TODO',
-      priority: 'LOW',
-      phase: 'Development',
-      domain: 'API',
-      tags: ['#user', '#profile', '#api'],
-      estimatedHours: 6,
-      milestone: 'User Management',
-      linkedBlocks: [],
-      dueDate: '2024-07-20'
-    }
-  ]
+const fetchTasks = async (projectId: string) => {
+  const { data } = await apiClient.get(`/tasks/project/${projectId}`);
+  return data;
 };
 
 export default function TaskManagement() {
+  const { projectId } = useParams<{ projectId: string }>();
   const [activeTab, setActiveTab] = useState('all');
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+
+  const { data: tasks = [], isLoading, isError } = useQuery({
+    queryKey: ['tasks', projectId],
+    queryFn: () => fetchTasks(projectId!),
+    enabled: !!projectId,
+  });
 
   const handleTaskSelect = (taskId: string) => {
     setSelectedTask(taskId);
   };
 
   const getTasksByTab = (tab: string) => {
+    if (!tasks) return [];
     switch (tab) {
       case 'my':
-        return mockTasks.all.filter(task => task.assignee === 'Luis'); // Mock current user
+        return tasks.filter(task => task.assignee === 'Luis'); // Mock current user
       case 'review':
-        return mockTasks.all.filter(task => task.status === 'PENDING_REVIEW');
+        return tasks.filter(task => task.status === 'PENDING_REVIEW');
       case 'completed':
-        return mockTasks.all.filter(task => task.status === 'COMPLETED');
+        return tasks.filter(task => task.status === 'COMPLETED');
       case 'backlog':
-        return mockTasks.all.filter(task => task.status === 'TODO');
+        return tasks.filter(task => task.status === 'TODO');
       default:
-        return mockTasks.all;
+        return tasks;
     }
   };
+
+  if (isLoading) {
+    return <div>Loading tasks...</div>;
+  }
+
+  if (isError) {
+    return <div>Error fetching tasks.</div>;
+  }
 
   return (
     <div className="p-6 space-y-6 h-full">

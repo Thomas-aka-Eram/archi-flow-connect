@@ -1,120 +1,134 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import apiClient from '@/lib/api';
 
+// Keeping the detailed interfaces for now, but the API will return a simpler Project object first.
+// We can expand this later.
 interface Project {
   id: string;
-  name: string;
+  name:string;
   description: string;
-  status: 'Draft' | 'Active' | 'Archived';
-  client?: string;
-  tags: string[];
-  createdAt: string;
-  visibility: 'Private' | 'Team-only' | 'Public';
-  githubRepo?: string;
-  members: ProjectMember[];
-  milestones: Milestone[];
+  // The following properties are not yet on the backend model, but we can keep them for future use.
+  // status: 'Draft' | 'Active' | 'Archived';
+  // client?: string;
+  // tags: string[];
+  // createdAt: string;
+  // visibility: 'Private' | 'Team-only' | 'Public';
+  // githubRepo?: string;
+  // members: ProjectMember[];
+  // milestones: Milestone[];
 }
 
-interface ProjectMember {
-  id: string;
-  name: string;
-  email: string;
-  role: 'Developer' | 'Reviewer' | 'PM' | 'Admin';
-  avatar?: string;
-  completedTasks: number;
-  pendingReviews: number;
-}
+// interface ProjectMember {
+//   id: string;
+//   name: string;
+//   email: string;
+//   role: 'Developer' | 'Reviewer' | 'PM' | 'Admin';
+//   avatar?: string;
+//   completedTasks: number;
+//   pendingReviews: number;
+// }
 
-interface Milestone {
-  id: string;
-  title: string;
-  dueDate: string;
-  responsibleLead: string;
-  status: 'Pending' | 'In Progress' | 'Completed';
-}
+// interface Milestone {
+//   id: string;
+//   title: string;
+//   dueDate: string;
+//   responsibleLead: string;
+//   status: 'Pending' | 'In Progress' | 'Completed';
+// }
 
 interface ProjectContextType {
   currentProject: Project | null;
   projects: Project[];
-  setCurrentProject: (project: Project) => void;
-  userRole: string;
+  setCurrentProject: (project: Project | null) => void;
+  setProjects: (projects: Project[]) => void;
+  fetchProjects: () => Promise<void>;
+  addProject: (project: Project) => void;
+  // userRole: string; // This should come from a UserContext
   switchProject: (projectId: string) => void;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
-const mockProjects: Project[] = [
-  {
-    id: 'proj-1',
-    name: 'Ecommerce Storefront',
-    description: 'Full-stack e-commerce platform with React frontend and Node.js backend',
-    status: 'Active',
-    client: 'TechCorp Inc.',
-    tags: ['ecommerce', 'react', 'nodejs'],
-    createdAt: '2024-06-15',
-    visibility: 'Team-only',
-    githubRepo: 'https://github.com/org/ecom-storefront',
-    members: [
-      { id: '1', name: 'Sophie Martinez', email: 'sophie@devhouse.com', role: 'PM', completedTasks: 15, pendingReviews: 3 },
-      { id: '2', name: 'Luis Rodriguez', email: 'luis@devhouse.com', role: 'Developer', completedTasks: 12, pendingReviews: 2 },
-      { id: '3', name: 'Raj Kumar', email: 'raj@devhouse.com', role: 'Developer', completedTasks: 18, pendingReviews: 1 },
-      { id: '4', name: 'Aisha Patel', email: 'aisha@devhouse.com', role: 'Reviewer', completedTasks: 8, pendingReviews: 5 },
-      { id: '5', name: 'Carlos Admin', email: 'carlos@devhouse.com', role: 'Admin', completedTasks: 5, pendingReviews: 0 }
-    ],
-    milestones: [
-      { id: 'm1', title: 'Design Complete', dueDate: '2024-08-21', responsibleLead: 'Sophie', status: 'Completed' },
-      { id: 'm2', title: 'API v1 Ready', dueDate: '2024-09-05', responsibleLead: 'Raj', status: 'In Progress' },
-      { id: 'm3', title: 'Frontend MVP', dueDate: '2024-09-20', responsibleLead: 'Luis', status: 'Pending' }
-    ]
-  },
-  {
-    id: 'proj-2',
-    name: 'Mobile Banking App',
-    description: 'Secure mobile banking application with biometric authentication',
-    status: 'Draft',
-    client: 'SecureBank',
-    tags: ['mobile', 'banking', 'security'],
-    createdAt: '2024-07-01',
-    visibility: 'Private',
-    members: [
-      { id: '1', name: 'Sophie Martinez', email: 'sophie@devhouse.com', role: 'PM', completedTasks: 3, pendingReviews: 1 },
-      { id: '3', name: 'Raj Kumar', email: 'raj@devhouse.com', role: 'Developer', completedTasks: 5, pendingReviews: 0 }
-    ],
-    milestones: [
-      { id: 'm4', title: 'Security Audit', dueDate: '2024-08-15', responsibleLead: 'Raj', status: 'Pending' }
-    ]
-  }
-];
-
 export function ProjectProvider({ children }: { children: React.ReactNode }) {
-  const [currentProject, setCurrentProject] = useState<Project | null>(mockProjects[0]);
-  const [projects] = useState<Project[]>(mockProjects);
-  const [userRole] = useState<string>('PM'); // This would come from auth context
+  const [currentProject, setCurrentProject] = useState<Project | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const navigate = useNavigate();
+  const params = useParams();
+  // const [userRole] = useState<string>('PM'); // This would come from auth context
+
+  const fetchProjects = useCallback(async () => {
+    console.log('Fetching projects...');
+    try {
+      const response = await apiClient.get('/projects');
+      console.log('API response for projects:', response);
+      const fetchedProjects = response.data;
+      setProjects(fetchedProjects);
+      console.log('Projects state updated:', fetchedProjects);
+
+      // After fetching, set the current project
+      const projectIdFromUrl = params.projectId;
+      const savedProjectId = localStorage.getItem('currentProjectId');
+      const targetProjectId = projectIdFromUrl || savedProjectId;
+
+      if (targetProjectId) {
+        const projectToSet = fetchedProjects.find(p => p.id === targetProjectId);
+        if (projectToSet) {
+          setCurrentProject(projectToSet);
+          console.log('Set current project:', projectToSet);
+        } else if (fetchedProjects.length > 0) {
+          // If saved project not found, default to the first one
+          setCurrentProject(fetchedProjects[0]);
+          localStorage.setItem('currentProjectId', fetchedProjects[0].id);
+          console.log('Defaulted to first project:', fetchedProjects[0]);
+        }
+      } else if (fetchedProjects.length > 0) {
+        // If no project saved, default to the first one
+        setCurrentProject(fetchedProjects[0]);
+        localStorage.setItem('currentProjectId', fetchedProjects[0].id);
+        console.log('No saved project, defaulted to first project:', fetchedProjects[0]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch projects:', error);
+      // Handle error appropriately, maybe clear projects or show a toast
+      setProjects([]);
+    }
+  }, [params.projectId]);
+
+  const addProject = (project: Project) => {
+    console.log('Adding new project to context:', project);
+    const newProjects = [...projects, project];
+    setProjects(newProjects);
+    console.log('Projects state after adding:', newProjects);
+    // Switch to the new project immediately
+    switchProject(project.id);
+  };
 
   const switchProject = (projectId: string) => {
+    console.log('Switching to projectId:', projectId);
     const project = projects.find(p => p.id === projectId);
     if (project) {
       setCurrentProject(project);
       localStorage.setItem('currentProjectId', projectId);
+      console.log('Current project switched to:', project);
+      // Navigate to the new project's dashboard, which will update the URL
+      // and ensure all components re-render with the correct context.
+      navigate(`/project/${projectId}/dashboard`);
+    } else {
+      console.warn(`Project with id ${projectId} not found in context.`);
     }
   };
-
-  useEffect(() => {
-    const savedProjectId = localStorage.getItem('currentProjectId');
-    if (savedProjectId) {
-      const project = projects.find(p => p.id === savedProjectId);
-      if (project) {
-        setCurrentProject(project);
-      }
-    }
-  }, [projects]);
 
   return (
     <ProjectContext.Provider value={{
       currentProject,
       projects,
       setCurrentProject,
-      userRole,
+      setProjects,
+      fetchProjects,
+      addProject,
+      // userRole,
       switchProject
     }}>
       {children}

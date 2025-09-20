@@ -38,38 +38,7 @@ const vcsProviders = [
   { id: 'bitbucket', name: 'Bitbucket', icon: GitBranch, color: 'text-blue-600' },
 ];
 
-const mockCommits = [
-  {
-    id: 'commit-1',
-    hash: 'a1b2c3d',
-    message: 'feat: add Google OAuth integration #task-1',
-    author: 'Luis',
-    timestamp: '2024-07-11 14:30',
-    linkedTasks: ['task-1'],
-    linkedBlocks: ['req-1'],
-    filesChanged: 5
-  },
-  {
-    id: 'commit-2',
-    hash: 'e4f5g6h',
-    message: 'fix: handle password validation #block-login-api',
-    author: 'Raj',
-    timestamp: '2024-07-11 10:15',
-    linkedTasks: [],
-    linkedBlocks: ['des-2'],
-    filesChanged: 2
-  },
-  {
-    id: 'commit-3',
-    hash: 'i7j8k9l',
-    message: 'docs: update API documentation',
-    author: 'Aisha',
-    timestamp: '2024-07-10 16:45',
-    linkedTasks: [],
-    linkedBlocks: [],
-    filesChanged: 1
-  }
-];
+const mockCommits = [];
 
 export default function GitHubIntegration() {
   const [selectedProvider, setSelectedProvider] = useState('github');

@@ -2,56 +2,25 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { GitCommit, CheckCircle, MessageCircle, FileText } from "lucide-react";
+import { LucideIcon } from "lucide-react";
 
-const activities = [
-  {
-    id: 1,
-    type: "commit",
-    icon: GitCommit,
-    user: { name: "Raj Kumar", initials: "RK", avatar: undefined },
-    action: "committed code for",
-    target: "OAuth Login Implementation",
-    time: "2 minutes ago",
-    badge: "COMMIT",
-    badgeColor: "bg-blue-500/10 text-blue-500",
-  },
-  {
-    id: 2,
-    type: "task",
-    icon: CheckCircle,
-    user: { name: "Luis Garcia", initials: "LG", avatar: undefined },
-    action: "completed task",
-    target: "Cart Page Component",
-    time: "15 minutes ago",
-    badge: "TASK",
-    badgeColor: "bg-green-500/10 text-green-500",
-  },
-  {
-    id: 3,
-    type: "review",
-    icon: MessageCircle,
-    user: { name: "Aisha Patel", initials: "AP", avatar: undefined },
-    action: "requested review for",
-    target: "Login API Documentation",
-    time: "1 hour ago",
-    badge: "REVIEW",
-    badgeColor: "bg-orange-500/10 text-orange-500",
-  },
-  {
-    id: 4,
-    type: "docs",
-    icon: FileText,
-    user: { name: "Sophie Martinez", initials: "SM", avatar: undefined },
-    action: "updated documentation",
-    target: "User Authentication Flow",
-    time: "2 hours ago",
-    badge: "DOCS",
-    badgeColor: "bg-purple-500/10 text-purple-500",
-  },
-];
+export interface Activity {
+  id: number;
+  type: string;
+  icon: LucideIcon;
+  user: { name: string; initials: string; avatar?: string };
+  action: string;
+  target: string;
+  time: string;
+  badge: string;
+  badgeColor: string;
+}
 
-export function RecentActivity() {
+interface RecentActivityProps {
+  activities: Activity[];
+}
+
+export function RecentActivity({ activities }: RecentActivityProps) {
   return (
     <Card>
       <CardHeader>

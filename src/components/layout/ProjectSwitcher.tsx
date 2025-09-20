@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,16 +15,15 @@ import { useProject } from "@/contexts/ProjectContext";
 export function ProjectSwitcher() {
   const { currentProject, projects, switchProject } = useProject();
 
-  if (!currentProject) return null;
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Active': return 'bg-green-500/10 text-green-700';
-      case 'Draft': return 'bg-yellow-500/10 text-yellow-700';
-      case 'Archived': return 'bg-gray-500/10 text-gray-700';
-      default: return 'bg-gray-500/10 text-gray-700';
-    }
-  };
+  // Don't render the switcher if there are no projects to switch between.
+  if (!currentProject || !projects || projects.length === 0) {
+    return (
+        <div className="flex items-center gap-2">
+            <FolderOpen className="h-4 w-4 flex-shrink-0" />
+            <span className="font-medium">No Projects</span>
+        </div>
+    );
+  }
 
   return (
     <DropdownMenu>
@@ -34,9 +32,6 @@ export function ProjectSwitcher() {
           <div className="flex items-center gap-2 min-w-0">
             <FolderOpen className="h-4 w-4 flex-shrink-0" />
             <span className="truncate font-medium">{currentProject.name}</span>
-            <Badge variant="outline" className={`text-xs flex-shrink-0 ${getStatusColor(currentProject.status)}`}>
-              {currentProject.status}
-            </Badge>
           </div>
           <ChevronDown className="h-4 w-4 flex-shrink-0" />
         </Button>
@@ -54,16 +49,8 @@ export function ProjectSwitcher() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="font-medium truncate">{project.name}</span>
-                  <Badge variant="outline" className={`text-xs ${getStatusColor(project.status)}`}>
-                    {project.status}
-                  </Badge>
                 </div>
                 <p className="text-sm text-muted-foreground truncate">{project.description}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-xs text-muted-foreground">{project.members.length} members</span>
-                  <span className="text-xs text-muted-foreground">•</span>
-                  <span className="text-xs text-muted-foreground">{project.milestones.length} milestones</span>
-                </div>
               </div>
             </div>
           </DropdownMenuItem>

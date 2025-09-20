@@ -1,40 +1,21 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Clock, AlertCircle, Users } from "lucide-react";
+import { LucideIcon } from "lucide-react";
 
-const taskStats = [
-  {
-    icon: CheckCircle,
-    label: "Completed",
-    count: 24,
-    color: "text-green-500",
-    bgColor: "bg-green-500/10",
-  },
-  {
-    icon: Clock,
-    label: "In Progress",
-    count: 12,
-    color: "text-blue-500",
-    bgColor: "bg-blue-500/10",
-  },
-  {
-    icon: AlertCircle,
-    label: "Pending Review",
-    count: 5,
-    color: "text-orange-500",
-    bgColor: "bg-orange-500/10",
-  },
-  {
-    icon: Users,
-    label: "Backlog",
-    count: 18,
-    color: "text-gray-500",
-    bgColor: "bg-gray-500/10",
-  },
-];
+export interface TaskStat {
+  icon: LucideIcon;
+  label: string;
+  count: number;
+  color: string;
+  bgColor: string;
+}
 
-export function TasksOverview() {
+interface TasksOverviewProps {
+  taskStats: TaskStat[];
+}
+
+export function TasksOverview({ taskStats }: TasksOverviewProps) {
   return (
     <Card>
       <CardHeader>

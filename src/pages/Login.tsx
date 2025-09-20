@@ -6,12 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useUser } from '@/contexts/UserContext';
 import apiClient from '@/lib/api';
 import { useToast } from "@/hooks/use-toast";
 
 export default function Login() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { login } = useUser();
   const [email, setEmail] = useState('demo@archi.dev');
   const [password, setPassword] = useState('password');
   const [showPassword, setShowPassword] = useState(false);
@@ -23,14 +25,14 @@ export default function Login() {
 
     try {
       const response = await apiClient.post('/auth/login', { email, password });
-
+      console.log('Login response:', response.data);
       if (response.data.access_token) {
-        localStorage.setItem('authToken', response.data.access_token);
+        await login(response.data.access_token);
         toast({
           title: "Login Successful",
           description: "Welcome back!",
         });
-        navigate('/dashboard');
+        navigate('/home');
       }
     } catch (error: unknown) {
       let errorMessage = "Invalid credentials.";

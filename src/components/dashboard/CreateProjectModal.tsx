@@ -30,9 +30,13 @@ export function CreateProjectModal({ isOpen, onClose, onProjectCreated }: Create
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    console.log('handleSubmit triggered');
+    const payload = { name, description };
+    console.log('Payload to be sent to /api/projects:', payload);
 
     try {
-      const response = await apiClient.post('/projects', { name, description });
+      const response = await apiClient.post('/projects', payload);
+      console.log('Successfully received response from /api/projects:', response);
       toast({
         title: "Project Created",
         description: `"${response.data.name}" has been successfully created.`,
@@ -40,9 +44,19 @@ export function CreateProjectModal({ isOpen, onClose, onProjectCreated }: Create
       onProjectCreated(response.data);
       onClose();
     } catch (error: any) {
+      console.error('Error creating project:', error);
+      if (error.response) {
+        console.error('Error response data:', error.response.data);
+        console.error('Error response status:', error.response.status);
+        console.error('Error response headers:', error.response.headers);
+      } else if (error.request) {
+        console.error('Error request:', error.request);
+      } else {
+        console.error('Error message:', error.message);
+      }
       toast({
         title: "Failed to create project",
-        description: error.message || "An unexpected error occurred.",
+        description: error.response?.data?.message || error.message || "An unexpected error occurred.",
         variant: "destructive",
       });
     } finally {

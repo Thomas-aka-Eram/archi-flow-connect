@@ -8,45 +8,11 @@ import { Search, Filter, Clock, CheckCircle, XCircle } from "lucide-react";
 import { ReviewQueue } from "@/components/reviews/ReviewQueue";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
 
-const mockReviews = {
-  docs: [
-    {
-      id: 'review-1',
-      type: 'block' as const,
-      title: 'Login API Schema Design',
-      author: 'Raj',
-      reviewer: 'Aisha',
-      status: 'PENDING_REVIEW',
-      submittedAt: '2024-07-11 09:30',
-      phase: 'Design',
-      priority: 'HIGH'
-    },
-    {
-      id: 'review-2',
-      type: 'block' as const,
-      title: 'Password Recovery Flow',
-      author: 'Luis',
-      reviewer: 'Aisha',
-      status: 'CHANGES_REQUESTED',
-      submittedAt: '2024-07-10 14:20',
-      phase: 'Requirements',
-      priority: 'MEDIUM'
-    }
-  ],
-  tasks: [
-    {
-      id: 'review-3',
-      type: 'task' as const,
-      title: 'Implement OAuth Login',
-      author: 'Luis',
-      reviewer: 'Carlos',
-      status: 'PENDING_REVIEW',
-      submittedAt: '2024-07-11 11:45',
-      phase: 'Development',
-      priority: 'HIGH'
-    }
-  ]
-};
+const EmptyState = ({ message }: { message: string }) => (
+  <div className="flex items-center justify-center h-64">
+    <p className="text-muted-foreground">{message}</p>
+  </div>
+);
 
 export default function ReviewApproval() {
   const [selectedReview, setSelectedReview] = useState<string | null>(null);
@@ -55,7 +21,7 @@ export default function ReviewApproval() {
     setSelectedReview(reviewId);
   };
 
-  const getAllReviews = () => [...mockReviews.docs, ...mockReviews.tasks];
+  const reviews: any[] = [];
 
   return (
     <div className="p-6 space-y-6 h-full">
@@ -86,7 +52,7 @@ export default function ReviewApproval() {
             <div className="flex items-center gap-3">
               <Clock className="h-8 w-8 text-yellow-500" />
               <div>
-                <p className="text-2xl font-bold">3</p>
+                <p className="text-2xl font-bold">0</p>
                 <p className="text-sm text-muted-foreground">Pending Reviews</p>
               </div>
             </div>
@@ -97,7 +63,7 @@ export default function ReviewApproval() {
             <div className="flex items-center gap-3">
               <CheckCircle className="h-8 w-8 text-green-500" />
               <div>
-                <p className="text-2xl font-bold">12</p>
+                <p className="text-2xl font-bold">0</p>
                 <p className="text-sm text-muted-foreground">Approved This Week</p>
               </div>
             </div>
@@ -108,7 +74,7 @@ export default function ReviewApproval() {
             <div className="flex items-center gap-3">
               <XCircle className="h-8 w-8 text-red-500" />
               <div>
-                <p className="text-2xl font-bold">2</p>
+                <p className="text-2xl font-bold">0</p>
                 <p className="text-sm text-muted-foreground">Changes Requested</p>
               </div>
             </div>
@@ -118,7 +84,7 @@ export default function ReviewApproval() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-sm font-bold text-primary">2.1</span>
+                <span className="text-sm font-bold text-primary">0</span>
               </div>
               <div>
                 <p className="text-2xl font-bold">Days</p>
@@ -143,31 +109,26 @@ export default function ReviewApproval() {
             </div>
 
             <TabsContent value="all" className="p-6">
-              <ReviewQueue 
-                reviews={getAllReviews()} 
-                onReviewSelect={handleReviewSelect}
-              />
+              {reviews.length > 0 ? (
+                <ReviewQueue 
+                  reviews={reviews} 
+                  onReviewSelect={handleReviewSelect}
+                />
+              ) : (
+                <EmptyState message="No reviews available." />
+              )}
             </TabsContent>
 
             <TabsContent value="docs" className="p-6">
-              <ReviewQueue 
-                reviews={mockReviews.docs} 
-                onReviewSelect={handleReviewSelect}
-              />
+              <EmptyState message="No document reviews available." />
             </TabsContent>
 
             <TabsContent value="tasks" className="p-6">
-              <ReviewQueue 
-                reviews={mockReviews.tasks} 
-                onReviewSelect={handleReviewSelect}
-              />
+              <EmptyState message="No task reviews available." />
             </TabsContent>
 
             <TabsContent value="my" className="p-6">
-              <ReviewQueue 
-                reviews={getAllReviews().filter(r => r.reviewer === 'Aisha')} 
-                onReviewSelect={handleReviewSelect}
-              />
+              <EmptyState message="You have no reviews assigned." />
             </TabsContent>
           </Tabs>
         </CardContent>
