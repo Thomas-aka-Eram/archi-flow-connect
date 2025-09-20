@@ -105,7 +105,7 @@ export default function SDLCDocumentation() {
       // A modal would be better here.
       const response = await apiClient.post(`/documents/project/${currentProject.id}`, {
         title: `New Document in ${activePhase}`,
-        phaseId: activePhase, // Assuming phaseId is the key
+        phaseKey: activePhase, // Assuming phaseId is the key
       });
       setDocuments(prev => [...prev, response.data]);
       setSelectedDocument(response.data.id);
