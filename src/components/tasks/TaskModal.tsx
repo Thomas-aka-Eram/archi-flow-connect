@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,72 +20,104 @@ import {
   GitCommit
 } from "lucide-react";
 
+import { useUser } from '@/contexts/UserContext';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import apiClient from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
+import { Input } from '@/components/ui/input';
+
 interface TaskModalProps {
   taskId: string;
   isOpen: boolean;
   onClose: () => void;
 }
 
-const mockTaskDetails = {
-  'task-1': {
-    id: 'task-1',
-    title: 'Implement OAuth Login',
-    assignee: 'Luis',
-    status: 'IN_PROGRESS',
-    priority: 'HIGH',
-    phase: 'Development',
-    domain: 'API',
-    tags: ['#authentication', '#login', '#oauth'],
-    estimatedHours: 8,
-    milestone: 'Authentication System',
-    dueDate: '2024-07-15',
-    description: 'Implement OAuth2 login flow with Google and GitHub providers. Include JWT token generation and refresh logic.',
-    linkedBlocks: [
-      { 
-        id: 'req-1', 
-        title: 'User Login Requirements', 
-        phase: 'Requirements',
-        content: `# User Login Requirements
-
-The system must support secure user authentication with the following capabilities:
-
-## Authentication Methods
-- Email and password
-- OAuth integration (Google, GitHub)
-- Multi-factor authentication (optional)`
-      },
-      { 
-        id: 'des-1', 
-        title: 'OAuth UI Flow', 
-        phase: 'Design',
-        content: `## OAuth Authentication Flow
-
-**User Journey:**
-1. User clicks "Login with Google/GitHub"
-2. Redirect to OAuth provider
-3. User authorizes application
-4. Callback with authorization code
-5. Exchange code for access token`
-      }
-    ],
-    activity: [
-      { type: 'commit', message: 'feat: add Google OAuth integration', author: 'Luis', timestamp: '2024-07-11 14:30' },
-      { type: 'comment', message: 'Working on JWT token generation', author: 'Luis', timestamp: '2024-07-11 10:15' },
-      { type: 'status_change', message: 'Status changed from TODO to IN_PROGRESS', author: 'Luis', timestamp: '2024-07-10 09:00' }
-    ],
-    comments: [
-      { id: 1, author: 'Raj', message: 'Should we include Apple login as well?', timestamp: '2024-07-10 16:20' },
-      { id: 2, author: 'Luis', message: 'Let\'s focus on Google and GitHub first, then add Apple in next sprint', timestamp: '2024-07-10 16:25' }
-    ]
-  }
-};
-
 export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
+  const [isEditing, setIsEditing] = useState(false);
   const [newComment, setNewComment] = useState('');
-  const [taskStatus, setTaskStatus] = useState('IN_PROGRESS');
-  const task = mockTaskDetails[taskId as keyof typeof mockTaskDetails];
+  const [formData, setFormData] = useState<any>(null);
 
-  if (!task) return null;
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { user } = useUser();
+
+  const { data: task, isLoading, isError } = useQuery({
+    queryKey: ['task', taskId],
+    queryFn: async () => {
+      const response = await apiClient.get(`/tasks/${taskId}`);
+      return response.data;
+    },
+    enabled: !!taskId,
+  });
+
+  useEffect(() => {
+    if (task) {
+      setFormData({
+        ...task,
+        assignees: task.assignees.map((a: any) => ({ userId: a.user.id, role: a.role || 'developer' })),
+      });
+    }
+  }, [task]);
+
+  const { data: members } = useQuery({
+    queryKey: ['project-members', task?.projectId],
+    queryFn: async () => {
+      const response = await apiClient.get(`/projects/${task.projectId}/members`);
+      return response.data;
+    },
+    enabled: !!task?.projectId,
+  });
+
+  const updateTaskMutation = useMutation({
+    mutationFn: (updatedFields: any) =>
+      apiClient.patch(`/tasks/${taskId}`, updatedFields),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task', taskId] });
+      toast({
+        title: "Task updated",
+      });
+      setIsEditing(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to update task",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleFieldChange = (field: string, value: any) => {
+    setFormData((prev: any) => ({ ...prev, [field]: value }));
+  };
+
+  const handleAssigneeChange = (userId: string) => {
+    handleFieldChange('assignees', [{ userId, role: 'developer' }]);
+  };
+
+  const handleSave = () => {
+    updateTaskMutation.mutate(formData);
+  };
+
+  
+
+  
+
+  if (isLoading) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent>Loading...</DialogContent>
+      </Dialog>
+    );
+  }
+
+  if (isError || !task) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent>Error loading task.</DialogContent>
+      </Dialog>
+    );
+  }
 
   const handleSubmitComment = () => {
     console.log('Submitting comment:', newComment);
@@ -93,8 +125,20 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
   };
 
   const handleStatusChange = (newStatus: string) => {
-    setTaskStatus(newStatus);
-    console.log('Status changed to:', newStatus);
+    console.log("Current user:", user);
+    console.log("Task assignees:", task.assignees);
+    const isAssignee = task.assignees.some((a: any) => a.user.id === user?.userId);
+    console.log("Is current user an assignee?", isAssignee);
+
+    if (isAssignee) {
+      updateTaskMutation.mutate({ status: newStatus });
+    } else {
+      toast({
+        title: "Permission denied",
+        description: "Only assignees can update the task status.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleOpenDocument = (blockId: string) => {
@@ -108,7 +152,15 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
         <DialogHeader className="flex-shrink-0">
           <div className="flex items-start justify-between">
             <div>
-              <DialogTitle className="text-xl">{task.title}</DialogTitle>
+              {isEditing ? (
+                <Input
+                  value={formData.title}
+                  onChange={(e) => handleFieldChange('title', e.target.value)}
+                  className="text-xl font-bold"
+                />
+              ) : (
+                <DialogTitle className="text-xl">{task.title}</DialogTitle>
+              )}
               <div className="flex items-center gap-2 mt-2">
                 <Badge variant="outline">{task.status.replace('_', ' ')}</Badge>
                 <Badge variant="outline">{task.priority}</Badge>
@@ -117,9 +169,9 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Select value={taskStatus} onValueChange={handleStatusChange}>
+              <Select value={task.status} onValueChange={handleStatusChange}>
                 <SelectTrigger className="w-40">
-                  <SelectValue />
+                  <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="TODO">To Do</SelectItem>
@@ -128,10 +180,15 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                   <SelectItem value="COMPLETED">Completed</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => setIsEditing(!isEditing)}>
                 <Edit className="h-4 w-4 mr-2" />
-                Edit
+                {isEditing ? 'Cancel' : 'Edit'}
               </Button>
+              {isEditing && (
+                <Button size="sm" onClick={handleSave} disabled={updateTaskMutation.isPending}>
+                  {updateTaskMutation.isPending ? 'Saving...' : 'Save'}
+                </Button>
+              )}
             </div>
           </div>
         </DialogHeader>
@@ -142,7 +199,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
               <TabsTrigger value="details">Task Details</TabsTrigger>
               <TabsTrigger value="docs">
                 <FileText className="h-4 w-4 mr-2" />
-                Docs Context ({task.linkedBlocks.length})
+                Docs Context ({(task.linkedBlocks || []).length})
               </TabsTrigger>
               <TabsTrigger value="activity">
                 <Activity className="h-4 w-4 mr-2" />
@@ -150,7 +207,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
               </TabsTrigger>
               <TabsTrigger value="comments">
                 <MessageSquare className="h-4 w-4 mr-2" />
-                Comments ({task.comments.length})
+                Comments ({(task.comments || []).length})
               </TabsTrigger>
             </TabsList>
 
@@ -163,21 +220,47 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                   <CardContent className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Assignee</span>
-                      <div className="flex items-center gap-2">
-                        <Avatar className="w-6 h-6">
-                          <AvatarFallback className="text-xs">
-                            {task.assignee.slice(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm">{task.assignee}</span>
-                      </div>
+                      {isEditing ? (
+                        <Select
+                          value={formData.assignees[0]?.userId}
+                          onValueChange={handleAssigneeChange}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select assignee" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(members || []).map((member: any) => (
+                              <SelectItem key={member.user.id} value={member.user.id}>
+                                {member.user.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Avatar className="w-6 h-6">
+                            <AvatarFallback className="text-xs">
+                              {(task.assignees[0]?.user?.name || '').slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm">{task.assignees[0]?.user?.name || 'Unassigned'}</span>
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Due Date</span>
-                      <div className="flex items-center gap-1 text-sm">
-                        <Calendar className="h-4 w-4" />
-                        {task.dueDate}
-                      </div>
+                      {isEditing ? (
+                        <Input
+                          type="date"
+                          value={formData.dueDate ? new Date(formData.dueDate).toISOString().split('T')[0] : ''}
+                          onChange={(e) => handleFieldChange('dueDate', e.target.value)}
+                        />
+                      ) : (
+                        <div className="flex items-center gap-1 text-sm">
+                          <Calendar className="h-4 w-4" />
+                          {task.dueDate}
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Estimated Hours</span>
@@ -199,9 +282,9 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                   </CardHeader>
                   <CardContent>
                     <div className="flex flex-wrap gap-1">
-                      {task.tags.map((tag) => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
-                          {tag}
+                      {(task.tags || []).map((taskTag) => (
+                        <Badge key={taskTag.id} variant="secondary" className="text-xs">
+                          {taskTag.tag.name}
                         </Badge>
                       ))}
                     </div>
@@ -214,7 +297,15 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                   <CardTitle className="text-sm">Description</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm">{task.description}</p>
+                  {isEditing ? (
+                    <Textarea
+                      value={formData.description}
+                      onChange={(e) => handleFieldChange('description', e.target.value)}
+                      rows={5}
+                    />
+                  ) : (
+                    <p className="text-sm">{task.description}</p>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -222,7 +313,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
             <TabsContent value="docs" className="flex-1 overflow-y-auto space-y-4">
               <div className="space-y-3">
                 <h3 className="font-medium">Linked SDLC Blocks</h3>
-                {task.linkedBlocks.map((block) => (
+                {(task.linkedBlocks || []).map((block) => (
                   <Card key={block.id} className="cursor-pointer hover:shadow-md transition-shadow">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
@@ -258,7 +349,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
 
             <TabsContent value="activity" className="flex-1 overflow-y-auto space-y-4">
               <div className="space-y-3">
-                {task.activity.map((item, index) => (
+                {(task.activity || []).map((item, index) => (
                   <Card key={index}>
                     <CardContent className="p-4">
                       <div className="flex items-start gap-3">
@@ -286,7 +377,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
             <TabsContent value="comments" className="flex-1 overflow-y-auto space-y-4">
               <div className="space-y-4">
                 <div className="space-y-3">
-                  {task.comments.map((comment) => (
+                  {(task.comments || []).map((comment) => (
                     <Card key={comment.id}>
                       <CardContent className="p-4">
                         <div className="flex items-start gap-3">

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,9 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, X, Tag, Settings, ChevronRight, ChevronDown, Search, Edit3, Palette, Grid3X3 } from "lucide-react";
 import { useTagsDomains } from "@/contexts/TagsDomainsContext";
 import { ColorPicker } from "./ColorPicker";
+import { useToast } from '@/hooks/use-toast';
 
 export function TagsDomainManager() {
   const { tags, domains, addTag, removeTag, addDomain, removeDomain, getTagColor, getTagDisplayName } = useTagsDomains();
+  const { toast } = useToast();
   const [newDomain, setNewDomain] = useState('');
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['auth', 'ui', 'api', 'database', 'testing']));
   const [newTagName, setNewTagName] = useState('');
@@ -26,6 +27,11 @@ export function TagsDomainManager() {
 
   const handleAddTag = () => {
     if (newTagName.trim()) {
+      const tagExists = tags.some(tag => tag.name.toLowerCase() === newTagName.trim().toLowerCase());
+      if (tagExists) {
+        toast({ title: "Tag already exists", variant: "destructive" });
+        return;
+      }
       addTag(newTagName.trim(), newTagColor, selectedParent, newTagPhase);
       setNewTagName('');
       setNewTagColor('#3B82F6');
@@ -36,6 +42,11 @@ export function TagsDomainManager() {
 
   const handleAddDomain = () => {
     if (newDomain.trim()) {
+      const domainExists = domains.some(domain => domain.toLowerCase() === newDomain.trim().toLowerCase());
+      if (domainExists) {
+        toast({ title: "Domain already exists", variant: "destructive" });
+        return;
+      }
       addDomain(newDomain.trim());
       setNewDomain('');
     }
@@ -58,7 +69,7 @@ export function TagsDomainManager() {
   });
 
   const renderTagGrid = () => {
-    const rootTags = filteredTags.filter(tag => !tag.parent);
+    const rootTags = filteredTags.filter(tag => !tag.parentId);
     
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -146,7 +157,7 @@ export function TagsDomainManager() {
     );
   };
 
-  const renderTagTree = (parentTags: typeof tags, level = 0) => {
+  const renderTagTree = (parentTags: typeof tags) => {
     return parentTags.map(tag => {
       const hasChildren = tag.children.length > 0;
       const isExpanded = expandedNodes.has(tag.id);
@@ -158,7 +169,7 @@ export function TagsDomainManager() {
         <div key={tag.id} className="select-none">
           <div 
             className="flex items-center gap-2 py-2 px-2 hover:bg-accent rounded group transition-colors"
-            style={{ marginLeft: `${level * 20}px` }}
+            style={{ marginLeft: `${tag.level * 20}px` }}
           >
             {hasChildren ? (
               <button
@@ -209,7 +220,7 @@ export function TagsDomainManager() {
           
           {hasChildren && isExpanded && (
             <div>
-              {renderTagTree(childTags, level + 1)}
+              {renderTagTree(childTags)}
             </div>
           )}
         </div>
@@ -217,7 +228,7 @@ export function TagsDomainManager() {
     });
   };
 
-  const rootTags = filteredTags.filter(tag => !tag.parent);
+  const rootTags = filteredTags.filter(tag => !tag.parentId);
 
   return (
     <div className="space-y-6">

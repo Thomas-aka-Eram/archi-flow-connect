@@ -43,6 +43,7 @@ interface NotebookBlockProps {
   block: Block;
   isSelected: boolean;
   isEditing: boolean;
+  isUpdating: boolean;
   isNewBlock?: boolean;
   onEdit: () => void;
   onFinalize: (content: string, title?: string) => void;
@@ -58,6 +59,7 @@ export function NotebookBlock({
   block,
   isSelected,
   isEditing,
+  isUpdating,
   isNewBlock = false,
   onEdit,
   onFinalize,
@@ -213,6 +215,35 @@ export function NotebookBlock({
   };
 
   const renderMarkdown = (text: string) => {
+    const renderTable = (tableMarkdown: string) => {
+      const rows = tableMarkdown.trim().split('\n');
+      const header = rows[0];
+      const body = rows.slice(2);
+
+      const renderRow = (row: string, isHeader: boolean) => {
+        const cells = row.split('|').map(c => c.trim());
+        // Remove the first and last empty cells
+        cells.shift();
+        cells.pop();
+
+        return (
+                  `<tr>
+         ${cells.map(cell => `<${isHeader ? 'th' : 'td'} class="border border-gray-600 px-4 py-2 text-left">${cell}</${isHeader ? 'th' : 'td'}>`).join('')}
+       </tr>`        );
+      };
+
+      return (
+        `<table class="border-collapse w-full my-4">
+          <thead>
+            ${renderRow(header, true)}
+          </thead>
+          <tbody>
+            ${body.map(row => renderRow(row, false)).join('')}
+          </tbody>
+        </table>`
+      );
+    };
+
     return text
       .replace(/^# (.*$)/gm, '<h1 class="text-2xl font-bold mb-4">$1</h1>')
       .replace(/^## (.*$)/gm, '<h2 class="text-xl font-semibold mb-3">$1</h2>')
@@ -227,7 +258,7 @@ export function NotebookBlock({
       .replace(/```([\s\S]*?)```/g, '<pre class="bg-muted p-4 rounded-md font-mono text-sm overflow-x-auto border">$1</pre>')
       .replace(/`([^`]+)`/g, '<code class="bg-muted px-1 py-0.5 rounded text-sm">$1</code>')
       .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="max-w-full h-auto rounded-md my-2 border" />')
-      .replace(/\|([^|\n]+)\|([^|\n]+)\|([^|\n]*)\|/g, '<table class="border-collapse border border-gray-300 my-4 w-full"><tr><td class="border border-gray-300 px-2 py-1">$1</td><td class="border border-gray-300 px-2 py-1">$2</td><td class="border border-gray-300 px-2 py-1">$3</td></tr></table>')
+      .replace(/\|([^|\n]+)\|/g, (match) => renderTable(match))
       .replace(/\n/g, '<br />');
   };
 
@@ -269,6 +300,7 @@ export function NotebookBlock({
                   {tag}
                 </Badge>
               ))}
+              {isUpdating && <Badge variant="outline">Loading...</Badge>}
             </div>
             <div className={`flex items-center gap-1 transition-opacity duration-200 ${
               isHovered || isSelected ? 'opacity-100' : 'opacity-0'

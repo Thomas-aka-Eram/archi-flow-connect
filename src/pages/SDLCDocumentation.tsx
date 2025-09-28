@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, FileText, Settings, Download, Search } from "lucide-react";
 import { PhaseNavigator } from "@/components/sdlc/PhaseNavigator";
 import { DocumentEditor } from "@/components/sdlc/DocumentEditor";
+import { DocumentList } from "@/components/sdlc/DocumentList";
 import { DocumentTree } from "@/components/sdlc/DocumentTree";
 import { ExportModal } from "@/components/sdlc/ExportModal";
 import { TagsDomainManager } from "@/components/sdlc/TagsDomainManager";
@@ -32,16 +33,16 @@ interface Block {
 }
 
 const phases = [
-  { id: 'requirements', name: 'Requirements', color: 'bg-blue-500', enabled: true },
-  { id: 'design', name: 'Design', color: 'bg-purple-500', enabled: true },
-  { id: 'development', name: 'Development', color: 'bg-green-500', enabled: true },
-  { id: 'testing', name: 'Testing', color: 'bg-orange-500', enabled: true },
-  { id: 'deployment', name: 'Deployment', color: 'bg-red-500', enabled: false },
-  { id: 'maintenance', name: 'Maintenance', color: 'bg-gray-500', enabled: false },
+  { id: 'REQUIREMENTS', name: 'Requirements', color: 'bg-blue-500', enabled: true },
+  { id: 'DESIGN', name: 'Design', color: 'bg-purple-500', enabled: true },
+  { id: 'DEVELOPMENT', name: 'Development', color: 'bg-green-500', enabled: true },
+  { id: 'TESTING', name: 'Testing', color: 'bg-orange-500', enabled: true },
+  { id: 'DEPLOYMENT', name: 'Deployment', color: 'bg-red-500', enabled: false },
+  { id: 'MAINTENANCE', name: 'Maintenance', color: 'bg-gray-500', enabled: false },
 ];
 
 export default function SDLCDocumentation() {
-  const [activePhase, setActivePhase] = useState('requirements');
+  const [activePhase, setActivePhase] = useState('REQUIREMENTS');
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<string | null>(null);
@@ -57,7 +58,7 @@ export default function SDLCDocumentation() {
       setLoading(true);
       try {
         const response = await apiClient.get(
-          `/documents/project/${currentProject.id}?phase=${activePhase}`
+          `/projects/${currentProject.id}/documents?phase=${activePhase}`
         );
         // The API returns a simpler document structure, so we map it to the frontend type
         const formattedDocuments = response.data.map((doc: any) => ({
@@ -101,18 +102,50 @@ export default function SDLCDocumentation() {
     if (!currentProject) return;
 
     try {
+      toast({ title: "Creating new document..." });
       // For simplicity, creating a document with a default title.
       // A modal would be better here.
-      const response = await apiClient.post(`/documents/project/${currentProject.id}`, {
+      const response = await apiClient.post(`/projects/${currentProject.id}/documents`, {
         title: `New Document in ${activePhase}`,
         phaseKey: activePhase, // Assuming phaseId is the key
       });
       setDocuments(prev => [...prev, response.data]);
       setSelectedDocument(response.data.id);
       setView('editor');
+      toast({ title: "New document created!" });
     } catch (error: any) {
        toast({
         title: "Failed to create document",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDocumentRename = async (docId: string, newName: string) => {
+    try {
+      toast({ title: "Renaming document..." });
+      const response = await apiClient.patch(`/documents/${docId}`, { name: newName });
+      setDocuments(documents.map(doc => doc.id === docId ? response.data : doc));
+      toast({ title: "Document renamed successfully" });
+    } catch (error: any) {
+      toast({
+        title: "Failed to rename document",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDocumentDelete = async (docId: string) => {
+    try {
+      toast({ title: "Deleting document..." });
+      await apiClient.delete(`/documents/${docId}`);
+      setDocuments(documents.filter(doc => doc.id !== docId));
+      toast({ title: "Document deleted successfully" });
+    } catch (error: any) {
+      toast({
+        title: "Failed to delete document",
         description: error.message,
         variant: "destructive",
       });
@@ -213,10 +246,11 @@ export default function SDLCDocumentation() {
               {loading ? (
                 <p>Loading documents...</p>
               ) : (
-                <DocumentTree 
+                <DocumentList
                   documents={documents}
                   onDocumentSelect={handleDocumentSelect}
-                  onBlockSelect={handleBlockSelect}
+                  onDocumentRename={handleDocumentRename}
+                  onDocumentDelete={handleDocumentDelete}
                 />
               )}
             </CardContent>

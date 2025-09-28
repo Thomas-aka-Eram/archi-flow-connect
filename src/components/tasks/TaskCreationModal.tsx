@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -14,6 +13,7 @@ import { HierarchicalTagPicker } from "@/components/sdlc/HierarchicalTagPicker";
 import { useProject } from '@/contexts/ProjectContext';
 import apiClient from '@/lib/api';
 import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface TaskCreationModalProps {
   isOpen: boolean;
@@ -24,6 +24,7 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
   const { domains: availableDomains, getTagColor, tags } = useTagsDomains();
   const { currentProject } = useProject();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -37,15 +38,50 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
   });
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showTagPicker, setShowTagPicker] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [suggestions, setSuggestions] = useState([]);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
+
+  const createTaskMutation = useMutation({
+    mutationFn: (taskPayload: any) => apiClient.post(`/tasks/project/${currentProject!.id}`, taskPayload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', currentProject!.id] });
+      toast({
+        title: "Task Created",
+        description: "The new task has been added to the project.",
+      });
+      onClose();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to create task",
+        description: error.message || "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  useEffect(() => {
+    const fetchTeamMembers = async () => {
+      if (currentProject) {
+        try {
+          const response = await apiClient.get(`/projects/${currentProject.id}/members`);
+          setTeamMembers(response.data);
+        } catch (error) {
+          console.error("Failed to fetch team members", error);
+        }
+      }
+    };
+
+    fetchTeamMembers();
+  }, [currentProject]);
 
   useEffect(() => {
     const fetchSuggestions = async () => {
-      if (selectedTags.length > 0 || formData.domain) {
+      if (currentProject && (selectedTags.length > 0 || formData.domain)) {
         try {
           const response = await apiClient.post('/tasks/suggestions', {
-            tags: selectedTags,
+            projectId: currentProject.id,
+            tagIds: selectedTags,
             domainId: formData.domain,
             estimateHours: formData.estimatedHours ? parseInt(formData.estimatedHours, 10) : undefined,
           });
@@ -61,14 +97,7 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
     }, 500); // Debounce to avoid too many requests
 
     return () => clearTimeout(debounce);
-  }, [selectedTags, formData.domain, formData.estimatedHours]);
-
-  const teamMembers = [
-    { value: 'luis', name: 'Luis', skills: ['React', 'Node.js'], availability: 90 },
-    { value: 'raj', name: 'Raj', skills: ['Python', 'API'], availability: 85 },
-    { value: 'aisha', name: 'Aisha', skills: ['UI/UX', 'Frontend'], availability: 75 },
-    { value: 'carlos', name: 'Carlos', skills: ['DevOps', 'Backend'], availability: 60 }
-  ];
+  }, [selectedTags, formData.domain, formData.estimatedHours, currentProject]);
 
   const handleRemoveTag = (tagToRemove: string) => {
     setSelectedTags(selectedTags.filter(tag => tag !== tagToRemove));
@@ -84,37 +113,26 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
       return;
     }
 
-    setLoading(true);
-    try {
-      const taskPayload = {
-        title: formData.title,
-        description: formData.description,
-        assigneeId: formData.assignee,
-        priority: formData.priority,
-        phase: formData.phase,
-        domainId: formData.domain,
-        estimatedHours: formData.estimatedHours ? parseInt(formData.estimatedHours, 10) : undefined,
-        milestone: formData.milestone,
-        dueDate: formData.dueDate,
-        tags: selectedTags,
-      };
+    const tagIds = selectedTags.map(tagName => {
+      const tag = tags.find(t => t.name === tagName);
+      return tag ? tag.id : tagName;
+    });
 
-      await apiClient.post(`/projects/${currentProject.id}/tasks`, taskPayload);
+    const taskPayload = {
+      title: formData.title,
+      description: formData.description,
+      assignees: [{ userId: formData.assignee, role: 'developer' }], // Assuming role, adjust as needed
+      priority: formData.priority,
+      phase: formData.phase,
+      domainId: formData.domain,
+      estimateHours: formData.estimatedHours ? parseInt(formData.estimatedHours, 10) : undefined,
+      milestone: formData.milestone,
+      dueDate: formData.dueDate,
+      tags: tagIds,
+    };
 
-      toast({
-        title: "Task Created",
-        description: "The new task has been added to the project.",
-      });
-      onClose();
-    } catch (error: any) {
-      toast({
-        title: "Failed to create task",
-        description: error.message || "An unexpected error occurred.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    console.log("Task Payload:", taskPayload);
+    createTaskMutation.mutate(taskPayload);
   };
 
   return (
@@ -176,13 +194,8 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
                       </>
                     )}
                     {teamMembers.map((member) => (
-                      <SelectItem key={member.value} value={member.value}>
-                        <div className="flex items-center justify-between w-full">
-                          <span>{member.name}</span>
-                          <Badge variant="outline" className="ml-2 text-xs">
-                            {member.availability}% available
-                          </Badge>
-                        </div>
+                      <SelectItem key={member.user.id} value={member.user.id}>
+                        {member.user.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -231,8 +244,8 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
                   </SelectTrigger>
                   <SelectContent>
                     {availableDomains.map((domain) => (
-                      <SelectItem key={domain} value={domain.toLowerCase()}>
-                        {domain}
+                      <SelectItem key={domain.id} value={domain.id}>
+                        {domain.title}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -333,8 +346,8 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
               <Button variant="outline" onClick={onClose}>
                 Cancel
               </Button>
-              <Button onClick={handleSubmit} disabled={loading}>
-                {loading ? 'Creating...' : 'Create Task'}
+              <Button onClick={handleSubmit} disabled={createTaskMutation.isPending}>
+                {createTaskMutation.isPending ? 'Creating...' : 'Create Task'}
               </Button>
             </div>
           </div>

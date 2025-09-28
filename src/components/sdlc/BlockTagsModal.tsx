@@ -24,13 +24,18 @@ export function BlockTagsModal({
   currentDomain, 
   onSave 
 }: BlockTagsModalProps) {
-  const { domains } = useTagsDomains();
+  const { domains, tags } = useTagsDomains();
   const [selectedTags, setSelectedTags] = useState<string[]>(currentTags);
   const [selectedDomain, setSelectedDomain] = useState(currentDomain);
   const [showTagPicker, setShowTagPicker] = useState(false);
 
   const handleSave = () => {
-    onSave(selectedTags, selectedDomain);
+    const tagIds = selectedTags.map(tagName => {
+      const tag = tags.find(t => t.name === tagName);
+      return tag ? tag.id : tagName;
+    });
+    const domainId = domains.find(d => d.title === selectedDomain)?.id || selectedDomain;
+    onSave(tagIds, domainId);
     onClose();
   };
 
@@ -56,8 +61,8 @@ export function BlockTagsModal({
                 </SelectTrigger>
                 <SelectContent>
                   {domains.map((domain) => (
-                    <SelectItem key={domain} value={domain}>
-                      {domain}
+                    <SelectItem key={domain.id} value={domain.title}>
+                      {domain.title}
                     </SelectItem>
                   ))}
                 </SelectContent>

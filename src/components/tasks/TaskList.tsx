@@ -5,15 +5,34 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Calendar, Clock, Link } from "lucide-react";
 
+interface Tag {
+  id: string;
+  name: string;
+}
+
+interface TaskTag {
+  id: string;
+  tag: Tag;
+}
+
+interface User {
+  id: string;
+  name: string;
+}
+
+interface UserTask {
+  user: User;
+}
+
 interface Task {
   id: string;
   title: string;
-  assignee: string;
   status: string;
   priority: string;
   phase: string;
   domain: string;
-  tags: string[];
+  tags: TaskTag[];
+  assignees: UserTask[];
   estimatedHours: number;
   milestone: string;
   linkedBlocks: string[];
@@ -64,9 +83,9 @@ export function TaskList({ tasks, onTaskSelect, viewMode }: TaskListProps) {
                     <h4 className="font-medium mb-2">{task.title}</h4>
                     <div className="space-y-2">
                       <div className="flex flex-wrap gap-1">
-                        {task.tags.map((tag) => (
-                          <Badge key={tag} variant="secondary" className="text-xs">
-                            {tag}
+                        {(task.tags || []).map((taskTag) => (
+                          <Badge key={taskTag.id} variant="secondary" className="text-xs">
+                            {taskTag.tag.name}
                           </Badge>
                         ))}
                       </div>
@@ -74,10 +93,10 @@ export function TaskList({ tasks, onTaskSelect, viewMode }: TaskListProps) {
                         <div className="flex items-center gap-2">
                           <Avatar className="w-5 h-5">
                             <AvatarFallback className="text-xs">
-                              {task.assignee.slice(0, 2).toUpperCase()}
+                              {(task.assignees[0]?.user?.name || '').slice(0, 2).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
-                          <span>{task.assignee}</span>
+                          <span>{task.assignees[0]?.user?.name || 'Unassigned'}</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
@@ -119,10 +138,10 @@ export function TaskList({ tasks, onTaskSelect, viewMode }: TaskListProps) {
                   <div className="flex items-center gap-1">
                     <Avatar className="w-5 h-5">
                       <AvatarFallback className="text-xs">
-                        {task.assignee.slice(0, 2).toUpperCase()}
+                        {(task.assignees[0]?.user?.name || '').slice(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <span>{task.assignee}</span>
+                    <span>{task.assignees[0]?.user?.name || 'Unassigned'}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
@@ -132,7 +151,7 @@ export function TaskList({ tasks, onTaskSelect, viewMode }: TaskListProps) {
                     <Clock className="h-4 w-4" />
                     {task.estimatedHours}h
                   </div>
-                  {task.linkedBlocks.length > 0 && (
+                  {task.linkedBlocks && task.linkedBlocks.length > 0 && (
                     <div className="flex items-center gap-1">
                       <Link className="h-4 w-4" />
                       {task.linkedBlocks.length} linked
@@ -140,17 +159,11 @@ export function TaskList({ tasks, onTaskSelect, viewMode }: TaskListProps) {
                   )}
                 </div>
                 <div className="flex flex-wrap gap-1">
-                  {task.tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="text-xs">
-                      {tag}
+                  {(task.tags || []).map((taskTag) => (
+                    <Badge key={taskTag.id} variant="secondary" className="text-xs">
+                      {taskTag.tag.name}
                     </Badge>
                   ))}
-                  <Badge variant="outline" className="text-xs">
-                    {task.phase}
-                  </Badge>
-                  <Badge variant="outline" className="text-xs">
-                    {task.domain}
-                  </Badge>
                 </div>
               </div>
             </div>

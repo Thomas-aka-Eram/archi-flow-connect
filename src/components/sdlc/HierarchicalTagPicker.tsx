@@ -46,7 +46,7 @@ export function HierarchicalTagPicker({
 
   const handleTagSelect = (tagId: string) => {
     const hierarchy = getTagHierarchy(tagId);
-    const newSelectedTags = [...new Set([...selectedTags, ...hierarchy])];
+    const newSelectedTags = [...new Set([...selectedTags, ...hierarchy.map(t => t.name)])];
     onTagsChange(newSelectedTags);
   };
 
@@ -70,81 +70,79 @@ export function HierarchicalTagPicker({
   });
 
   const renderTagTree = (parentTags: Tag[], level = 0) => {
-    return parentTags
-      .filter(tag => filteredTags.includes(tag))
-      .map(tag => {
-        const hasChildren = tag.children.length > 0;
-        const isExpanded = expandedNodes.has(tag.id);
-        const displayName = getTagDisplayName(tag.id);
-        const isSelected = selectedTags.includes(displayName);
-        const childTags = tags.filter(t => tag.children.includes(t.id));
-        const tagColor = getTagColor(tag.id);
-        const tooltip = getTagTooltip(tag.id);
+    return parentTags.map(tag => {
+      const hasChildren = tag.children.length > 0;
+      const isExpanded = expandedNodes.has(tag.id);
+      const displayName = getTagDisplayName(tag.id);
+      const isSelected = selectedTags.includes(tag.name);
+      const childTags = tags.filter(t => tag.children.includes(t.id));
+      const tagColor = getTagColor(tag.id);
+      const tooltip = getTagTooltip(tag.id);
 
-        return (
-          <div key={tag.id} className="select-none">
-            <div 
-              className={`flex items-center gap-2 py-2 px-3 hover:bg-accent rounded cursor-pointer transition-colors group ${
-                isSelected ? 'bg-accent/50' : ''
-              }`}
-              style={{ marginLeft: `${level * 16}px` }}
-              title={tooltip}
-            >
-              {hasChildren ? (
-                <button
-                  onClick={() => toggleNode(tag.id)}
-                  className="p-0.5 hover:bg-accent-foreground/10 rounded transition-colors"
-                >
-                  {isExpanded ? (
-                    <ChevronDown className="h-3 w-3" />
-                  ) : (
-                    <ChevronRight className="h-3 w-3" />
-                  )}
-                </button>
-              ) : (
-                <div className="w-4" />
-              )}
-              
-              <div 
-                className="w-3 h-3 rounded-full border border-border"
-                style={{ backgroundColor: tagColor }}
-              />
-              
-              <Badge
-                variant="compact"
-                className="flex-1 cursor-pointer font-mono text-xs"
-                onClick={() => handleTagSelect(tag.id)}
+      return (
+        <div key={tag.id} className="select-none">
+          <div 
+            className={`flex items-center gap-2 py-2 px-3 hover:bg-accent rounded cursor-pointer transition-colors group ${
+              isSelected ? 'bg-accent/50' : ''
+            }`}
+            style={{ marginLeft: `${level * 16}px` }}
+            title={tooltip}
+          >
+            {hasChildren ? (
+              <button
+                onClick={() => toggleNode(tag.id)}
+                className="p-0.5 hover:bg-accent-foreground/10 rounded transition-colors"
               >
-                {displayName}
-              </Badge>
-
-              {tag.phase && (
-                <Badge variant="outline" className="text-xs px-1 py-0">
-                  {tag.phase}
-                </Badge>
-              )}
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={() => setSelectedParent(tag.id)}
-              >
-                <Plus className="h-3 w-3" />
-              </Button>
-            </div>
-            
-            {hasChildren && isExpanded && (
-              <div>
-                {renderTagTree(childTags, level + 1)}
-              </div>
+                {isExpanded ? (
+                  <ChevronDown className="h-3 w-3" />
+                ) : (
+                  <ChevronRight className="h-3 w-3" />
+                )}
+              </button>
+            ) : (
+              <div className="w-4" />
             )}
-          </div>
-        );
-      });
-  };
+            
+            <div 
+              className="w-3 h-3 rounded-full border border-border"
+              style={{ backgroundColor: tagColor }}
+            />
+            
+            <Badge
+              variant="compact"
+              className="flex-1 cursor-pointer font-mono text-xs"
+              onClick={() => handleTagSelect(tag.id)}
+            >
+              {displayName}
+            </Badge>
 
-  const rootTags = filteredTags.filter(tag => !tag.parent);
+            {tag.phase && (
+              <Badge variant="outline" className="text-xs px-1 py-0">
+                {tag.phase}
+              </Badge>
+            )}
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={() => setSelectedParent(tag.id)}
+            >
+              <Plus className="h-3 w-3" />
+            </Button>
+          </div>
+          
+          {hasChildren && isExpanded && (
+            <div>
+              {renderTagTree(childTags, level + 1)}
+            </div>
+          )}
+        </div>
+      );
+    });
+};
+
+  const rootTags = filteredTags.filter(tag => !tag.parentId);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

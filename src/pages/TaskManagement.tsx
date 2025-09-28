@@ -11,6 +11,7 @@ import { TaskModal } from "@/components/tasks/TaskModal";
 import { TaskCreationModal } from "@/components/tasks/TaskCreationModal";
 import { SmartAssignment } from "@/components/tasks/SmartAssignment";
 import apiClient from '@/lib/api';
+import { useUser } from '@/contexts/UserContext';
 import { useQuery } from '@tanstack/react-query';
 
 const fetchTasks = async (projectId: string) => {
@@ -20,6 +21,7 @@ const fetchTasks = async (projectId: string) => {
 
 export default function TaskManagement() {
   const { projectId } = useParams<{ projectId: string }>();
+  const { user } = useUser();
   const [activeTab, setActiveTab] = useState('all');
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
@@ -39,7 +41,8 @@ export default function TaskManagement() {
     if (!tasks) return [];
     switch (tab) {
       case 'my':
-        return tasks.filter(task => task.assignee === 'Luis'); // Mock current user
+        if (!user) return [];
+        return tasks.filter(task => task.assignees.some(a => a.user.id === user.id));
       case 'review':
         return tasks.filter(task => task.status === 'PENDING_REVIEW');
       case 'completed':

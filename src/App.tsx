@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -8,6 +7,7 @@ import { ProjectProvider, useProject } from '@/contexts/ProjectContext';
 import { TagsDomainsProvider } from '@/contexts/TagsDomainsContext';
 import { UserProvider } from '@/contexts/UserContext';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import { Toaster } from "@/components/ui/toaster";
 
 // Pages
 import Dashboard from '@/pages/Dashboard';
@@ -90,6 +90,7 @@ function App() {
 
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              <Toaster />
           </TagsDomainsProvider>
         </ProjectProvider>
       </UserProvider>
@@ -98,4 +99,3 @@ function App() {
 }
 
 export default App;
-
