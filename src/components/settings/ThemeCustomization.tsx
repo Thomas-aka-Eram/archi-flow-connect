@@ -20,11 +20,7 @@ const quickColors = [
   { name: 'Amber Gold', value: '45 100% 55%', hex: '#FFB84D' },
 ];
 
-interface ThemeCustomizationProps {
-  canCustomize?: boolean;
-}
-
-export function ThemeCustomization({ canCustomize = true }: ThemeCustomizationProps) {
+export function ThemeCustomization() {
   const { toast } = useToast();
   const [selectedColor, setSelectedColor] = useState(quickColors[0]);
   const [customHex, setCustomHex] = useState('#E23C4D');
@@ -56,7 +52,7 @@ export function ThemeCustomization({ canCustomize = true }: ThemeCustomizationPr
 
   // Apply theme color
   const applyThemeColor = (hslValue: string, preview = false) => {
-    if (!canCustomize && !preview) return;
+    // Removed if (!canCustomize && !preview) return;
     
     const root = document.documentElement;
     if (preview) {
@@ -137,19 +133,7 @@ export function ThemeCustomization({ canCustomize = true }: ThemeCustomizationPr
     }
   }, []);
 
-  if (!canCustomize) {
-    return (
-      <Card>
-        <CardContent className="p-8 text-center">
-          <Palette className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-          <h3 className="text-lg font-medium mb-2">Theme Customization Restricted</h3>
-          <p className="text-muted-foreground">
-            Only PM and Admin users can customize the theme colors for the project.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
+  
 
   return (
     <Card>
@@ -266,7 +250,6 @@ export function ThemeCustomization({ canCustomize = true }: ThemeCustomizationPr
           
           <Button 
             onClick={() => applyThemeColor(selectedColor.value)}
-            disabled={!canCustomize}
           >
             Save Theme
           </Button>

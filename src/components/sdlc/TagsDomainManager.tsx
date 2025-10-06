@@ -42,7 +42,7 @@ export function TagsDomainManager() {
 
   const handleAddDomain = () => {
     if (newDomain.trim()) {
-      const domainExists = domains.some(domain => domain.toLowerCase() === newDomain.trim().toLowerCase());
+      const domainExists = domains.some(domain => domain.title.toLowerCase() === newDomain.trim().toLowerCase());
       if (domainExists) {
         toast({ title: "Domain already exists", variant: "destructive" });
         return;
@@ -397,11 +397,11 @@ export function TagsDomainManager() {
           </div>
           <div className="flex flex-wrap gap-2">
             {domains.map((domain) => (
-              <Badge key={domain} variant="outline" className="gap-1">
-                {domain}
+              <Badge key={domain.id} variant="outline" className="gap-1">
+                {domain.title}
                 <X 
                   className="h-3 w-3 cursor-pointer hover:text-destructive" 
-                  onClick={() => removeDomain(domain)}
+                  onClick={() => removeDomain(domain.id)}
                 />
               </Badge>
             ))}

@@ -9,10 +9,16 @@ import { useTagsDomains } from "@/contexts/TagsDomainsContext";
 import { HierarchicalTagPicker } from "./HierarchicalTagPicker";
 import { X, Tag as TagIcon } from "lucide-react";
 
+interface Tag {
+  id: string;
+  name: string;
+  parentId: string | null;
+}
+
 interface BlockTagsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  currentTags: string[];
+  currentTags: Tag[];
   currentDomain: string;
   onSave: (tags: string[], domain: string) => void;
 }
@@ -25,7 +31,7 @@ export function BlockTagsModal({
   onSave 
 }: BlockTagsModalProps) {
   const { domains, tags } = useTagsDomains();
-  const [selectedTags, setSelectedTags] = useState<string[]>(currentTags);
+  const [selectedTags, setSelectedTags] = useState<string[]>(currentTags.map(t => t.name));
   const [selectedDomain, setSelectedDomain] = useState(currentDomain);
   const [showTagPicker, setShowTagPicker] = useState(false);
 

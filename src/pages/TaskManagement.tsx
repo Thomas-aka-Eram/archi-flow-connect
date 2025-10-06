@@ -44,11 +44,11 @@ export default function TaskManagement() {
         if (!user) return [];
         return tasks.filter(task => task.assignees.some(a => a.user.id === user.id));
       case 'review':
-        return tasks.filter(task => task.status === 'PENDING_REVIEW');
+        return tasks.filter(task => task.status === 'IN_PROGRESS');
       case 'completed':
         return tasks.filter(task => task.status === 'COMPLETED');
       case 'backlog':
-        return tasks.filter(task => task.status === 'TODO');
+        return tasks.filter(task => task.status === 'OPEN');
       default:
         return tasks;
     }
@@ -136,7 +136,7 @@ export default function TaskManagement() {
             </TabsContent>
 
             <TabsContent value="smart" className="p-6">
-              <SmartAssignment />
+              <SmartAssignment projectId={projectId} />
             </TabsContent>
 
             <TabsContent value="review" className="p-6">

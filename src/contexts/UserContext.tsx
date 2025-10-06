@@ -6,6 +6,7 @@ interface User {
   email: string;
   name: string;
   avatarUrl?: string;
+  role?: string;
 }
 
 interface UserContextType {
@@ -39,6 +40,20 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     fetchUser();
   }, []);
+
+  // Apply theme from user preferences
+  useEffect(() => {
+    if (user?.theme) {
+      const root = document.documentElement;
+      root.classList.remove('light', 'dark', 'system'); // Remove existing themes
+      root.classList.add(user.theme); // Add the new theme
+    } else {
+      // Default to system theme if no user theme is set
+      const root = document.documentElement;
+      root.classList.remove('light', 'dark');
+      root.classList.add('system');
+    }
+  }, [user?.theme]);
 
   const login = async (token: string) => {
     localStorage.setItem('authToken', token);

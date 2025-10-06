@@ -9,15 +9,7 @@ interface Project {
   id: string;
   name:string;
   description: string;
-  // The following properties are not yet on the backend model, but we can keep them for future use.
-  // status: 'Draft' | 'Active' | 'Archived';
-  // client?: string;
-  // tags: string[];
-  // createdAt: string;
-  // visibility: 'Private' | 'Team-only' | 'Public';
-  // githubRepo?: string;
-  // members: ProjectMember[];
-  // milestones: Milestone[];
+  userRole?: string;
 }
 
 // interface ProjectMember {
@@ -45,7 +37,7 @@ interface ProjectContextType {
   setProjects: (projects: Project[]) => void;
   fetchProjects: () => Promise<void>;
   addProject: (project: Project) => void;
-  // userRole: string; // This should come from a UserContext
+  currentProjectUserRole: string | undefined;
   switchProject: (projectId: string) => void;
 }
 
@@ -128,7 +120,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       setProjects,
       fetchProjects,
       addProject,
-      // userRole,
+      currentProjectUserRole: currentProject?.userRole,
       switchProject
     }}>
       {children}

@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import apiClient from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,264 +8,187 @@ import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Brain, Clock, Star, TrendingUp, Users, Zap, CheckCircle } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Brain, Clock, Star, TrendingUp, Users, Zap, CheckCircle, Filter } from "lucide-react";
+import { useToast } from '@/hooks/use-toast';
+import { useUser } from '@/contexts/UserContext';
+import { useProject } from '@/contexts/ProjectContext';
 
-const mockTasks = [
-  {
-    id: '1',
-    title: 'Implement JWT Refresh Logic',
-    description: 'Add automatic token refresh functionality',
-    tags: ['#auth', '#jwt', '#api'],
-    domain: 'Backend',
-    estimatedHours: 6,
-    status: 'unassigned'
-  },
-  {
-    id: '2',
-    title: 'Design Password Strength UI',
-    description: 'Create password strength indicator component',
-    tags: ['#ui', '#password', '#component'],
-    domain: 'Frontend',
-    estimatedHours: 4,
-    status: 'unassigned'
-  },
-  {
-    id: '3',
-    title: 'Fix Cart Sync Issues',
-    description: 'Resolve synchronization problems in shopping cart',
-    tags: ['#cart', '#sync', '#bug'],
-    domain: 'E-commerce',
-    estimatedHours: 8,
-    status: 'unassigned'
-  },
-  {
-    id: '4',
-    title: 'Implement Checkout Handler',
-    description: 'Build secure payment processing workflow',
-    tags: ['#payment', '#checkout', '#security'],
-    domain: 'Backend',
-    estimatedHours: 12,
-    status: 'unassigned'
-  }
-];
-
-const mockCoworkers = {
-  '1': [
-    { 
-      id: 'luis', 
-      name: 'Luis', 
-      avatar: 'LU', 
-      score: 95, 
-      skillMatch: 88, 
-      workload: 15, 
-      velocity: 92,
-      reasons: ['Expert in JWT', 'Available 8h/day', 'High velocity']
-    },
-    { 
-      id: 'raj', 
-      name: 'Raj', 
-      avatar: 'RA', 
-      score: 88, 
-      skillMatch: 82, 
-      workload: 25, 
-      velocity: 85,
-      reasons: ['Auth experience', 'Available 6h/day', 'Good velocity']
-    },
-    { 
-      id: 'carlos', 
-      name: 'Carlos', 
-      avatar: 'CA', 
-      score: 72, 
-      skillMatch: 70, 
-      workload: 40, 
-      velocity: 75,
-      reasons: ['API knowledge', 'Available 4h/day', 'Medium velocity']
-    }
-  ],
-  '2': [
-    { 
-      id: 'aisha', 
-      name: 'Aisha', 
-      avatar: 'AI', 
-      score: 92, 
-      skillMatch: 95, 
-      workload: 20, 
-      velocity: 88,
-      reasons: ['UI/UX expert', 'Available 7h/day', 'Component specialist']
-    },
-    { 
-      id: 'luis', 
-      name: 'Luis', 
-      avatar: 'LU', 
-      score: 78, 
-      skillMatch: 75, 
-      workload: 15, 
-      velocity: 92,
-      reasons: ['React expertise', 'Available 8h/day', 'Good design sense']
-    },
-    { 
-      id: 'raj', 
-      name: 'Raj', 
-      avatar: 'RA', 
-      score: 65, 
-      skillMatch: 60, 
-      workload: 25, 
-      velocity: 85,
-      reasons: ['Frontend knowledge', 'Available 6h/day', 'Learning UI']
-    }
-  ],
-  '3': [
-    { 
-      id: 'carlos', 
-      name: 'Carlos', 
-      avatar: 'CA', 
-      score: 89, 
-      skillMatch: 85, 
-      workload: 40, 
-      velocity: 75,
-      reasons: ['E-commerce expert', 'Cart system knowledge', 'Debug specialist']
-    },
-    { 
-      id: 'sophia', 
-      name: 'Sophia', 
-      avatar: 'SO', 
-      score: 84, 
-      skillMatch: 80, 
-      workload: 30, 
-      velocity: 90,
-      reasons: ['Sync algorithms', 'Available 6h/day', 'High velocity']
-    },
-    { 
-      id: 'aisha', 
-      name: 'Aisha', 
-      avatar: 'AI', 
-      score: 71, 
-      skillMatch: 65, 
-      workload: 20, 
-      velocity: 88,
-      reasons: ['Frontend debugging', 'UI logic', 'Good availability']
-    }
-  ],
-  '4': [
-    { 
-      id: 'luis', 
-      name: 'Luis', 
-      avatar: 'LU', 
-      score: 94, 
-      skillMatch: 90, 
-      workload: 15, 
-      velocity: 92,
-      reasons: ['Payment systems expert', 'Security knowledge', 'High availability']
-    },
-    { 
-      id: 'carlos', 
-      name: 'Carlos', 
-      avatar: 'CA', 
-      score: 87, 
-      skillMatch: 85, 
-      workload: 40, 
-      velocity: 75,
-      reasons: ['Backend architecture', 'Checkout experience', 'API design']
-    },
-    { 
-      id: 'raj', 
-      name: 'Raj', 
-      avatar: 'RA', 
-      score: 76, 
-      skillMatch: 70, 
-      workload: 25, 
-      velocity: 85,
-      reasons: ['Security protocols', 'Testing experience', 'Documentation skills']
-    }
-  ]
+// API Functions
+const fetchUnassignedTasks = async (projectId: string, filters: any) => {
+  const cleanFilters = Object.fromEntries(
+    Object.entries(filters).filter(([, value]) => value && value !== 'all')
+  );
+  const { data } = await apiClient.get(`/tasks/project/${projectId}/unassigned`, { params: cleanFilters });
+  return data;
 };
 
-export function SmartAssignmentRedesigned() {
-  const [selectedTaskId, setSelectedTaskId] = useState<string>('1');
+const fetchRecommendations = async (taskId: string) => {
+  const { data } = await apiClient.get(`/tasks/${taskId}/recommendations`);
+  return data;
+};
+
+const assignTask = async ({ taskId, userId }: { taskId: string, userId: string }) => {
+  const { data } = await apiClient.patch(`/tasks/${taskId}`, { assigneeId: userId });
+  return data;
+};
+
+const fetchProjectPhases = async (projectId: string) => {
+  const { data } = await apiClient.get(`/projects/${projectId}/phases`);
+  return data;
+};
+
+export function SmartAssignmentRedesigned({ projectId }: { projectId: string }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { user } = useUser();
+  const { currentProjectUserRole } = useProject();
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [filters, setFilters] = useState({
+    phaseId: 'all',
+    priority: 'all',
+  });
   const [assignmentModal, setAssignmentModal] = useState<{
     isOpen: boolean;
     task: any;
     coworker: any;
-  }>({
-    isOpen: false,
-    task: null,
-    coworker: null
+  }>({ isOpen: false, task: null, coworker: null });
+
+  const canAssign = currentProjectUserRole === 'Admin' || currentProjectUserRole === 'Manager';
+
+  const { data: projectPhases = [] } = useQuery({
+    queryKey: ['projectPhases', projectId],
+    queryFn: () => fetchProjectPhases(projectId),
   });
 
-  const selectedTask = mockTasks.find(task => task.id === selectedTaskId);
-  const recommendations = mockCoworkers[selectedTaskId] || [];
+  const { data: unassignedTasks = [], isLoading: isLoadingTasks } = useQuery({
+    queryKey: ['unassignedTasks', projectId, filters],
+    queryFn: () => fetchUnassignedTasks(projectId, filters),
+  });
+
+  useEffect(() => {
+    if (!selectedTaskId && unassignedTasks.length > 0) {
+      setSelectedTaskId(unassignedTasks[0].id);
+    }
+  }, [unassignedTasks, selectedTaskId]);
+
+  const { data: recommendations = [], isLoading: isLoadingRecommendations } = useQuery({
+    queryKey: ['recommendations', selectedTaskId],
+    queryFn: () => fetchRecommendations(selectedTaskId!),
+    enabled: !!selectedTaskId,
+  });
+
+  const assignmentMutation = useMutation({
+    mutationFn: assignTask,
+    onSuccess: () => {
+      toast({ title: "Task assigned successfully!" });
+      queryClient.invalidateQueries({ queryKey: ['unassignedTasks', projectId, filters] });
+      setAssignmentModal({ isOpen: false, task: null, coworker: null });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Assignment failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleAssignment = (coworker: any) => {
-    setAssignmentModal({
-      isOpen: true,
-      task: selectedTask,
-      coworker: coworker
-    });
+    if (!canAssign) return;
+    const selectedTask = unassignedTasks.find(task => task.id === selectedTaskId);
+    setAssignmentModal({ isOpen: true, task: selectedTask, coworker: coworker });
   };
 
   const confirmAssignment = () => {
-    // Here you would implement the actual assignment logic
-    console.log('Assigning task', assignmentModal.task?.title, 'to', assignmentModal.coworker?.name);
-    setAssignmentModal({ isOpen: false, task: null, coworker: null });
+    if (assignmentModal.task && assignmentModal.coworker) {
+      assignmentMutation.mutate({ taskId: assignmentModal.task.id, userId: assignmentModal.coworker.id });
+    }
   };
+
+  const selectedTask = unassignedTasks.find(task => task.id === selectedTaskId);
 
   return (
     <TooltipProvider>
       <div className="flex h-[calc(100vh-2rem)] gap-6">
-        {/* Left Pane - Task List */}
         <div className="flex-1 space-y-4">
           <div className="flex items-center gap-3">
             <Brain className="h-6 w-6 text-primary" />
             <div>
               <h2 className="text-xl font-semibold">Unassigned Tasks</h2>
-              <p className="text-muted-foreground text-sm">
-                Select a task to see AI recommendations
-              </p>
+              <p className="text-muted-foreground text-sm">Select a task to see AI recommendations</p>
             </div>
           </div>
 
-          <div className="space-y-3 overflow-y-auto max-h-[calc(100vh-8rem)]">
-            {mockTasks.map((task) => (
-              <Card 
-                key={task.id}
-                className={`cursor-pointer transition-all hover:shadow-md ${
-                  selectedTaskId === task.id ? 'ring-2 ring-primary bg-accent/50' : ''
-                }`}
-                onClick={() => setSelectedTaskId(task.id)}
-              >
-                <CardContent className="p-4">
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-2">
-                        <h3 className="font-semibold text-lg">{task.title}</h3>
-                        <p className="text-muted-foreground text-sm">{task.description}</p>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Filter className="h-4 w-4" />
+                Filters
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex gap-4">
+              <Select value={filters.phaseId} onValueChange={(value) => setFilters(f => ({...f, phaseId: value}))}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by phase..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Phases</SelectItem>
+                  {projectPhases.map((phase: any) => (
+                    <SelectItem key={phase.id} value={phase.id}>{phase.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={filters.priority} onValueChange={(value) => setFilters(f => ({...f, priority: value}))}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by priority..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Priorities</SelectItem>
+                  <SelectItem value="HIGH">High</SelectItem>
+                  <SelectItem value="MEDIUM">Medium</SelectItem>
+                  <SelectItem value="LOW">Low</SelectItem>
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
+
+          <div className="space-y-3 overflow-y-auto max-h-[calc(100vh-16rem)]">
+            {isLoadingTasks ? (
+              <p>Loading tasks...</p>
+            ) : unassignedTasks.length === 0 ? (
+              <p>No unassigned tasks match the current filters.</p>
+            ) : (
+              unassignedTasks.map((task) => (
+                <Card key={task.id} className={`cursor-pointer transition-all hover:shadow-md ${selectedTaskId === task.id ? 'ring-2 ring-primary bg-accent/50' : ''}`} onClick={() => setSelectedTaskId(task.id)}>
+                  <CardContent className="p-4">
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-2">
+                          <h3 className="font-semibold text-lg">{task.title}</h3>
+                          <p className="text-muted-foreground text-sm line-clamp-2">{task.description}</p>
+                        </div>
+                        <Badge variant="outline" className="ml-2">{task.priority}</Badge>
                       </div>
-                      <Badge variant="outline" className="ml-2">
-                        {task.domain}
-                      </Badge>
+                      <div className="flex items-center justify-between">
+                        <div className="flex flex-wrap gap-1">
+                          {task.tags.map((tag: any) => (
+                            <Badge key={tag.tag.id} variant="secondary" className="text-xs">{tag.tag.name}</Badge>
+                          ))}
+                        </div>
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <Clock className="h-4 w-4" />
+                          {task.estimatedHours}h
+                        </div>
+                      </div>
                     </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex flex-wrap gap-1">
-                        {task.tags.map((tag) => (
-                          <Badge key={tag} variant="secondary" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Clock className="h-4 w-4" />
-                        {task.estimatedHours}h
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
         </div>
 
-        {/* Right Pane - Recommendations */}
         <div className="w-96 space-y-4">
           <Card className="sticky top-0">
             <CardHeader>
@@ -281,102 +206,60 @@ export function SmartAssignmentRedesigned() {
                 </div>
               )}
             </CardHeader>
-            
             <CardContent className="space-y-4">
-              {recommendations.map((coworker, index) => (
-                <div key={coworker.id} className="space-y-3 p-3 rounded-lg border bg-card/50">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="w-10 h-10">
-                        <AvatarFallback>{coworker.avatar}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{coworker.name}</span>
-                          {index === 0 && <Badge variant="default" className="text-xs">Best Match</Badge>}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Star className="h-4 w-4 text-yellow-500" />
-                          <span className="text-sm font-medium">{coworker.score}%</span>
+              {isLoadingRecommendations ? (
+                <p>Loading recommendations...</p>
+              ) : recommendations.length === 0 ? (
+                <p>No recommendations available for this task.</p>
+              ) : (
+                recommendations.map((coworker: any, index: number) => (
+                  <div key={coworker.id} className="space-y-3 p-3 rounded-lg border bg-card/50">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="w-10 h-10"><AvatarFallback>{coworker.name.substring(0, 2).toUpperCase()}</AvatarFallback></Avatar>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{coworker.name}</span>
+                            {index === 0 && <Badge variant="default" className="text-xs">Best Match</Badge>}
+                          </div>
+                          <div className="flex items-center gap-1"><Star className="h-4 w-4 text-yellow-500" /><span className="text-sm font-medium">{coworker.score}%</span></div>
                         </div>
                       </div>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div style={{ display: 'inline-block' }}>
+                            <Button variant={index === 0 ? "default" : "outline"} size="sm" onClick={() => handleAssignment(coworker)} disabled={!canAssign}>{index === 0 ? 'Assign' : 'Select'}</Button>
+                          </div>
+                        </TooltipTrigger>
+                        {!canAssign && (
+                          <TooltipContent>
+                            <p>You don't have permission to assign tasks.</p>
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
                     </div>
-                    <Button 
-                      variant={index === 0 ? "default" : "outline"} 
-                      size="sm"
-                      onClick={() => handleAssignment(coworker)}
-                    >
-                      {index === 0 ? 'Assign' : 'Select'}
-                    </Button>
+                    <div className="grid grid-cols-3 gap-2 text-xs">
+                      <Tooltip><TooltipTrigger><div className="text-center p-2 bg-muted/50 rounded"><div className="font-medium">{coworker.skillMatch}%</div><div className="text-muted-foreground">Skill Match</div></div></TooltipTrigger><TooltipContent><p>How well their skills match this task</p></TooltipContent></Tooltip>
+                      <Tooltip><TooltipTrigger><div className="text-center p-2 bg-muted/50 rounded"><div className="font-medium">{coworker.workload}%</div><div className="text-muted-foreground">Workload</div></div></TooltipTrigger><TooltipContent><p>Current capacity utilization</p></TooltipContent></Tooltip>
+                      <Tooltip><TooltipTrigger><div className="text-center p-2 bg-muted/50 rounded"><div className="font-medium">{coworker.velocity}%</div><div className="text-muted-foreground">Velocity</div></div></TooltipTrigger><TooltipContent><p>Recent delivery performance</p></TooltipContent></Tooltip>
+                    </div>
+                    <div className="space-y-1">
+                      {coworker.reasons.map((reason: string, reasonIdx: number) => (
+                        <div key={reasonIdx} className="flex items-center gap-2 text-xs text-muted-foreground"><TrendingUp className="h-3 w-3" />{reason}</div>
+                      ))}
+                    </div>
+                    <Progress value={coworker.score} className="h-2" />
                   </div>
-
-                  <div className="grid grid-cols-3 gap-2 text-xs">
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <div className="text-center p-2 bg-muted/50 rounded">
-                          <div className="font-medium">{coworker.skillMatch}%</div>
-                          <div className="text-muted-foreground">Skill Match</div>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>How well their skills match this task</p>
-                      </TooltipContent>
-                    </Tooltip>
-
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <div className="text-center p-2 bg-muted/50 rounded">
-                          <div className="font-medium">{coworker.workload}%</div>
-                          <div className="text-muted-foreground">Workload</div>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Current capacity utilization</p>
-                      </TooltipContent>
-                    </Tooltip>
-
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <div className="text-center p-2 bg-muted/50 rounded">
-                          <div className="font-medium">{coworker.velocity}%</div>
-                          <div className="text-muted-foreground">Velocity</div>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Recent delivery performance</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-
-                  <div className="space-y-1">
-                    {coworker.reasons.map((reason, reasonIdx) => (
-                      <div key={reasonIdx} className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <TrendingUp className="h-3 w-3" />
-                        {reason}
-                      </div>
-                    ))}
-                  </div>
-
-                  <Progress value={coworker.score} className="h-2" />
-                </div>
-              ))}
+                ))
+              )}
             </CardContent>
           </Card>
         </div>
       </div>
 
-      {/* Assignment Confirmation Modal */}
-      <Dialog open={assignmentModal.isOpen} onOpenChange={(open) => 
-        setAssignmentModal({ isOpen: open, task: null, coworker: null })
-      }>
+      <Dialog open={assignmentModal.isOpen} onOpenChange={(open) => setAssignmentModal({ isOpen: open, task: null, coworker: null })}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-primary" />
-              Confirm Task Assignment
-            </DialogTitle>
-          </DialogHeader>
-          
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><CheckCircle className="h-5 w-5 text-primary" />Confirm Task Assignment</DialogTitle></DialogHeader>
           {assignmentModal.task && assignmentModal.coworker && (
             <div className="space-y-4">
               <div className="space-y-2">
@@ -384,58 +267,32 @@ export function SmartAssignmentRedesigned() {
                 <div className="p-3 bg-muted/50 rounded">
                   <p className="font-medium">{assignmentModal.task.title}</p>
                   <p className="text-sm text-muted-foreground">{assignmentModal.task.description}</p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <Clock className="h-4 w-4" />
-                    <span className="text-sm">{assignmentModal.task.estimatedHours}h estimated</span>
-                  </div>
+                  <div className="flex items-center gap-2 mt-2"><Clock className="h-4 w-4" /><span className="text-sm">{assignmentModal.task.estimatedHours}h estimated</span></div>
                 </div>
               </div>
-
               <div className="space-y-2">
                 <h4 className="font-medium">Assignee</h4>
                 <div className="flex items-center gap-3 p-3 bg-muted/50 rounded">
-                  <Avatar>
-                    <AvatarFallback>{assignmentModal.coworker.avatar}</AvatarFallback>
-                  </Avatar>
+                  <Avatar><AvatarFallback>{assignmentModal.coworker.name.substring(0, 2).toUpperCase()}</AvatarFallback></Avatar>
                   <div>
                     <p className="font-medium">{assignmentModal.coworker.name}</p>
-                    <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4 text-yellow-500" />
-                      <span className="text-sm">{assignmentModal.coworker.score}% match score</span>
-                    </div>
+                    <div className="flex items-center gap-1"><Star className="h-4 w-4 text-yellow-500" /><span className="text-sm">{assignmentModal.coworker.score}% match score</span></div>
                   </div>
                 </div>
               </div>
-
               <div className="space-y-2">
                 <h4 className="font-medium">Score Breakdown</h4>
                 <div className="grid grid-cols-3 gap-2 text-sm">
-                  <div className="text-center p-2 bg-muted/30 rounded">
-                    <div className="font-medium">{assignmentModal.coworker.skillMatch}%</div>
-                    <div className="text-muted-foreground">Skills</div>
-                  </div>
-                  <div className="text-center p-2 bg-muted/30 rounded">
-                    <div className="font-medium">{100 - assignmentModal.coworker.workload}%</div>
-                    <div className="text-muted-foreground">Capacity</div>
-                  </div>
-                  <div className="text-center p-2 bg-muted/30 rounded">
-                    <div className="font-medium">{assignmentModal.coworker.velocity}%</div>
-                    <div className="text-muted-foreground">Velocity</div>
-                  </div>
+                  <div className="text-center p-2 bg-muted/30 rounded"><div className="font-medium">{assignmentModal.coworker.skillMatch}%</div><div className="text-muted-foreground">Skills</div></div>
+                  <div className="text-center p-2 bg-muted/30 rounded"><div className="font-medium">{100 - assignmentModal.coworker.workload}%</div><div className="text-muted-foreground">Capacity</div></div>
+                  <div className="text-center p-2 bg-muted/30 rounded"><div className="font-medium">{assignmentModal.coworker.velocity}%</div><div className="text-muted-foreground">Velocity</div></div>
                 </div>
               </div>
             </div>
           )}
-
           <DialogFooter>
-            <Button variant="outline" onClick={() => 
-              setAssignmentModal({ isOpen: false, task: null, coworker: null })
-            }>
-              Cancel
-            </Button>
-            <Button onClick={confirmAssignment}>
-              Confirm Assignment
-            </Button>
+            <Button variant="outline" onClick={() => setAssignmentModal({ isOpen: false, task: null, coworker: null })}>Cancel</Button>
+            <Button onClick={confirmAssignment} disabled={assignmentMutation.isLoading}>{assignmentMutation.isLoading ? 'Assigning...' : 'Confirm Assignment'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -28,6 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useToast } from "@/hooks/use-toast";
 
 // Define a simple type for the project, can be expanded later
 interface Project {
@@ -52,6 +53,7 @@ function InvitationModal({ isOpen, onClose, projectId }) {
   const [invitation, setInvitation] = useState(null);
   const [loading, setLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!invitation) return;
@@ -74,8 +76,13 @@ function InvitationModal({ isOpen, onClose, projectId }) {
         roleOnJoin: role,
       });
       setInvitation(response.data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to generate invitation:', error);
+      toast({
+        title: "Failed to generate invitation",
+        description: error.response?.data?.message || "An unexpected error occurred.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -105,9 +112,13 @@ function InvitationModal({ isOpen, onClose, projectId }) {
                     <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Developer">Developer</SelectItem>
+                    <SelectItem value="Admin">Admin</SelectItem>
                     <SelectItem value="Manager">Manager</SelectItem>
+                    <SelectItem value="Developer">Developer</SelectItem>
                     <SelectItem value="Viewer">Viewer</SelectItem>
+                    <SelectItem value="Contributor">Contributor</SelectItem>
+                    <SelectItem value="QA">QA</SelectItem>
+                    <SelectItem value="Bot">Bot</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -219,22 +230,26 @@ export default function ProjectSettings() {
             <TableBody>
               {members.map((member) => (
                 <TableRow key={member.id}>
-                  <TableCell>{member.user.name}</TableCell>
-                  <TableCell>{member.user.email}</TableCell>
+                  <TableCell>{member.name}</TableCell>
+                  <TableCell>{member.email}</TableCell>
                   <TableCell>
                     <Select
                       value={member.role}
                       onValueChange={(newRole) =>
-                        handleRoleChange(member.user.id, newRole)
+                        handleRoleChange(member.id, newRole)
                       }
                     >
                       <SelectTrigger className="w-[180px]">
                         <SelectValue placeholder="Select a role" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Developer">Developer</SelectItem>
+                        <SelectItem value="Admin">Admin</SelectItem>
                         <SelectItem value="Manager">Manager</SelectItem>
+                        <SelectItem value="Developer">Developer</SelectItem>
                         <SelectItem value="Viewer">Viewer</SelectItem>
+                        <SelectItem value="Contributor">Contributor</SelectItem>
+                        <SelectItem value="QA">QA</SelectItem>
+                        <SelectItem value="Bot">Bot</SelectItem>
                       </SelectContent>
                     </Select>
                   </TableCell>

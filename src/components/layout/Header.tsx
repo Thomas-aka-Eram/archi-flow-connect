@@ -28,16 +28,6 @@ export function Header() {
     navigate('/login');
   };
 
-  // This is a placeholder. In a real app, this would likely be part of the user/auth context.
-  const userRole = 'Admin'; 
-
-  const handleRoleSwitch = (newRole: string) => {
-    // This would update the context in a real app
-    console.log(`Switching to role: ${newRole}`);
-  };
-
-  const isAdmin = userRole === 'Admin' || userRole === 'Super Admin';
-
   const getInitials = (name?: string) => {
     if (!name) return '';
     return name.split(' ').map((n) => n[0]).join('');
@@ -87,24 +77,6 @@ export function Header() {
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuLabel>{user?.name || 'User'}</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              
-              {isAdmin && (
-                <>
-                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-                    Switch Role (Admin Only)
-                  </DropdownMenuLabel>
-                  <DropdownMenuItem onClick={() => handleRoleSwitch('Developer')}>
-                    View as Developer
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleRoleSwitch('PM')}>
-                    View as PM
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleRoleSwitch('Reviewer')}>
-                    View as Reviewer
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                </>
-              )}
               
               <DropdownMenuItem onClick={() => navigate('/settings')}>
                 Settings

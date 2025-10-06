@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { FileText, GitBranch, CheckCircle, Zap, Shield } from "lucide-react";
+import { useUser } from "@/contexts/UserContext"; // Added import
 
 const FeatureCard = ({ icon: Icon, title, description }: { icon: React.ElementType, title: string, description: string }) => (
   <div className="bg-card p-6 rounded-lg border">
@@ -18,6 +19,7 @@ const FeatureCard = ({ icon: Icon, title, description }: { icon: React.ElementTy
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const { user, loading } = useUser(); // Added useUser hook
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -30,12 +32,25 @@ export default function LandingPage() {
           <span className="text-xl font-bold">Archi</span>
         </div>
         <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate('/login')}>
-            Log In
-          </Button>
-          <Button onClick={() => navigate('/signup')}>
-            Get Started
-          </Button>
+          {loading ? (
+            <div>Loading...</div>
+          ) : user ? (
+            <>
+              <span className="text-muted-foreground">Welcome, {user.name || user.email}!</span>
+              <Button onClick={() => navigate('/dashboard')}>
+                Go to Dashboard
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" onClick={() => navigate('/login')}>
+                Log In
+              </Button>
+              <Button onClick={() => navigate('/signup')}>
+                Get Started
+              </Button>
+            </>
+          )}
         </div>
       </header>
 

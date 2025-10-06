@@ -76,7 +76,7 @@ export function CreateProjectModal({
         description: `You have successfully joined the project.`,
       });
       onClose();
-      navigate(`/project/${response.data.projectId}`);
+      navigate(`/project/${response.data.projectId}/dashboard`);
     } catch (error: any) {
       toast({
         title: 'Failed to join project',

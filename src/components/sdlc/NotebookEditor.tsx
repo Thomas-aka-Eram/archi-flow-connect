@@ -9,12 +9,12 @@ import { useToast } from "@/hooks/use-toast";
 
 // Updated Block type to match backend schema more closely
 interface Block {
-  id: string; // This is the block version ID
+  id: string;
   blockGroupId: string;
   content: string;
   type: 'markdown' | 'text' | 'image' | 'diagram';
-  tags: { tag: { id: string; name: string } }[];
-  domains: { domain: { id: string; name: string } }[];
+  tags: { id: string; name: string }[];
+  domains: { id: string; title: string }[];
   title?: string;
   version: number;
 }
@@ -58,6 +58,7 @@ export function NotebookEditor({ documentId, onBack }: NotebookEditorProps) {
     try {
       setLoading(true);
       const response = await apiClient.get(`/documents/${documentId}/blocks`);
+      console.log('Blocks from backend:', response.data);
       setBlocks(response.data || []);
     } catch (error: any) {
       toast({
@@ -207,8 +208,8 @@ export function NotebookEditor({ documentId, onBack }: NotebookEditorProps) {
                   rendered: true, // Assume rendered for now
                   connections: [],
                   comments: 0,
-                  tags: block.tags.map(t => t.tag.name),
-                  domain: block.domains[0]?.domain.name || 'GENERAL',
+                  tags: block.tags,
+                  domain: block.domains[0]?.title || 'GENERAL',
                 }}
                 isUpdating={isUpdatingBlock === block.blockGroupId}
                 isSelected={selectedBlockId === block.id}

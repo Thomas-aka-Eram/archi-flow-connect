@@ -37,8 +37,8 @@ const phases = [
   { id: 'DESIGN', name: 'Design', color: 'bg-purple-500', enabled: true },
   { id: 'DEVELOPMENT', name: 'Development', color: 'bg-green-500', enabled: true },
   { id: 'TESTING', name: 'Testing', color: 'bg-orange-500', enabled: true },
-  { id: 'DEPLOYMENT', name: 'Deployment', color: 'bg-red-500', enabled: false },
-  { id: 'MAINTENANCE', name: 'Maintenance', color: 'bg-gray-500', enabled: false },
+  { id: 'DEPLOYMENT', name: 'Deployment', color: 'bg-red-500', enabled: true },
+  { id: 'MAINTENANCE', name: 'Maintenance', color: 'bg-gray-500', enabled: true },
 ];
 
 export default function SDLCDocumentation() {

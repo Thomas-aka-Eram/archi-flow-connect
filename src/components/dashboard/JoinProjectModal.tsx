@@ -44,7 +44,7 @@ export function JoinProjectModal({ isOpen, onClose }: JoinProjectModalProps) {
         title: "Successfully joined project!",
       });
       onClose();
-      navigate(`/project/${projectId}`);
+      navigate(`/project/${projectId}/dashboard`);
     } catch (error: any) {
       toast({
         title: "Failed to join project",

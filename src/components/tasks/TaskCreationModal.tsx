@@ -13,7 +13,7 @@ import { HierarchicalTagPicker } from "@/components/sdlc/HierarchicalTagPicker";
 import { useProject } from '@/contexts/ProjectContext';
 import apiClient from '@/lib/api';
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 interface TaskCreationModalProps {
   isOpen: boolean;
@@ -29,17 +29,25 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
     title: '',
     description: '',
     assignee: '',
-    priority: '',
-    phase: '',
-    domain: '',
-    estimatedHours: '',
-    milestone: '',
+    priority: 'MEDIUM',
+    phaseId: '',
+    domainId: '',
+    estimateHours: '',
     dueDate: ''
   });
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showTagPicker, setShowTagPicker] = useState(false);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
+
+  const { data: projectPhases = [] } = useQuery({
+    queryKey: ['projectPhases', currentProject?.id],
+    queryFn: async () => {
+      const response = await apiClient.get(`/projects/${currentProject!.id}/phases`);
+      return response.data;
+    },
+    enabled: !!currentProject,
+  });
 
   const createTaskMutation = useMutation({
     mutationFn: (taskPayload: any) => apiClient.post(`/tasks/project/${currentProject!.id}`, taskPayload),
@@ -75,30 +83,6 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
     fetchTeamMembers();
   }, [currentProject]);
 
-  useEffect(() => {
-    const fetchSuggestions = async () => {
-      if (currentProject && (selectedTags.length > 0 || formData.domain)) {
-        try {
-          const response = await apiClient.post('/tasks/suggestions', {
-            projectId: currentProject.id,
-            tagIds: selectedTags,
-            domainId: formData.domain,
-            estimateHours: formData.estimatedHours ? parseInt(formData.estimatedHours, 10) : undefined,
-          });
-          setSuggestions(response.data);
-        } catch (error) {
-          console.error("Failed to fetch suggestions", error);
-        }
-      }
-    };
-
-    const debounce = setTimeout(() => {
-      fetchSuggestions();
-    }, 500); // Debounce to avoid too many requests
-
-    return () => clearTimeout(debounce);
-  }, [selectedTags, formData.domain, formData.estimatedHours, currentProject]);
-
   const handleRemoveTag = (tagToRemove: string) => {
     setSelectedTags(selectedTags.filter(tag => tag !== tagToRemove));
   };
@@ -115,19 +99,18 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
 
     const tagIds = selectedTags.map(tagName => {
       const tag = tags.find(t => t.name === tagName);
-      return tag ? tag.id : tagName;
-    });
+      return tag ? tag.id : null;
+    }).filter(id => id !== null) as string[];
 
     const taskPayload = {
       title: formData.title,
       description: formData.description,
-      assignees: [{ userId: formData.assignee, role: 'developer' }], // Assuming role, adjust as needed
+      assignees: formData.assignee && formData.assignee !== 'none' ? [{ userId: formData.assignee, role: 'developer' }] : [],
       priority: formData.priority,
-      phase: formData.phase,
-      domainId: formData.domain,
-      estimateHours: formData.estimatedHours ? parseInt(formData.estimatedHours, 10) : undefined,
-      milestone: formData.milestone,
-      dueDate: formData.dueDate,
+      phaseId: formData.phaseId || undefined,
+      domainId: formData.domainId || undefined,
+      estimateHours: formData.estimateHours ? parseInt(formData.estimateHours, 10) : undefined,
+      dueDate: formData.dueDate || undefined,
       tags: tagIds,
     };
 
@@ -144,7 +127,6 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
           </DialogHeader>
 
           <div className="space-y-6">
-            {/* Basic Information */}
             <div className="space-y-4">
               <div>
                 <Label htmlFor="title">Task Title</Label>
@@ -168,7 +150,6 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
               </div>
             </div>
 
-            {/* Assignment & Priority */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Assignee</Label>
@@ -177,25 +158,10 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
                     <SelectValue placeholder="Select team member" />
                   </SelectTrigger>
                   <SelectContent>
-                    {suggestions.length > 0 && (
-                      <>
-                        <Label className="px-2 py-1.5 text-sm font-semibold">Suggestions</Label>
-                        {suggestions.map((suggestion: any) => (
-                          <SelectItem key={suggestion.user.id} value={suggestion.user.id}>
-                            <div className="flex items-center justify-between w-full">
-                              <span>{suggestion.user.name}</span>
-                              <Badge variant="outline" className="ml-2 text-xs">
-                                {Math.round(suggestion.score * 100)}% match
-                              </Badge>
-                            </div>
-                          </SelectItem>
-                        ))}
-                        <hr className="my-1" />
-                      </>
-                    )}
+                    <SelectItem value="none">Unassigned</SelectItem>
                     {teamMembers.map((member) => (
-                      <SelectItem key={member.user.id} value={member.user.id}>
-                        {member.user.name}
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -217,28 +183,26 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
               </div>
             </div>
 
-            {/* Phase & Domain */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>SDLC Phase</Label>
-                <Select value={formData.phase} onValueChange={(value) => setFormData({ ...formData, phase: value })}>
+                <Select value={formData.phaseId} onValueChange={(value) => setFormData({ ...formData, phaseId: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select phase" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="requirements">Requirements</SelectItem>
-                    <SelectItem value="design">Design</SelectItem>
-                    <SelectItem value="development">Development</SelectItem>
-                    <SelectItem value="testing">Testing</SelectItem>
-                    <SelectItem value="deployment">Deployment</SelectItem>
-                    <SelectItem value="maintenance">Maintenance</SelectItem>
+                    {projectPhases && projectPhases.length > 0 && projectPhases.map((phase: any) => (
+                      <SelectItem key={phase.id} value={phase.id}>
+                        {phase.title}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div>
                 <Label>Domain</Label>
-                <Select value={formData.domain} onValueChange={(value) => setFormData({ ...formData, domain: value })}>
+                <Select value={formData.domainId} onValueChange={(value) => setFormData({ ...formData, domainId: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select domain" />
                   </SelectTrigger>
@@ -253,8 +217,7 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
               </div>
             </div>
 
-            {/* Timeline */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="hours">Estimated Hours</Label>
                 <Input
@@ -263,16 +226,6 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
                   value={formData.estimatedHours}
                   onChange={(e) => setFormData({ ...formData, estimatedHours: e.target.value })}
                   placeholder="8"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="milestone">Milestone</Label>
-                <Input
-                  id="milestone"
-                  value={formData.milestone}
-                  onChange={(e) => setFormData({ ...formData, milestone: e.target.value })}
-                  placeholder="Authentication System"
                 />
               </div>
 
@@ -287,7 +240,6 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
               </div>
             </div>
 
-            {/* Enhanced Tags Section */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label>Tags</Label>
@@ -305,12 +257,13 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
               <div className="min-h-[100px] p-4 border rounded-lg bg-muted/30">
                 {selectedTags.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
-                    {selectedTags.map((tagName) => {
-                      const tag = tags.find(t => t.name === tagName);
+                    {selectedTags.map((tagId) => {
+                      const tag = tags.find(t => t.id === tagId);
+                      const tagName = tag ? tag.name : 'Unknown Tag';
                       const tagColor = tag ? getTagColor(tag.id) : '#6B7280';
                       
                       return (
-                        <Badge key={tagName} variant="secondary" className="gap-2">
+                        <Badge key={tagId} variant="secondary" className="gap-2">
                           <div 
                             className="w-2 h-2 rounded-full"
                             style={{ backgroundColor: tagColor }}
@@ -318,7 +271,7 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
                           {tagName}
                           <X 
                             className="h-3 w-3 cursor-pointer hover:text-destructive" 
-                            onClick={() => handleRemoveTag(tagName)}
+                            onClick={() => handleRemoveTag(tagId)}
                           />
                         </Badge>
                       );
@@ -332,16 +285,8 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
                   </div>
                 )}
               </div>
-              
-              {selectedTags.length > 0 && (
-                <div className="text-xs text-muted-foreground">
-                  <p>• Selected tags include their parent hierarchy automatically</p>
-                  <p>• Colors indicate tag hierarchy and phase relationships</p>
-                </div>
-              )}
             </div>
 
-            {/* Actions */}
             <div className="flex justify-end gap-3">
               <Button variant="outline" onClick={onClose}>
                 Cancel
@@ -359,7 +304,7 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
         onClose={() => setShowTagPicker(false)}
         selectedTags={selectedTags}
         onTagsChange={setSelectedTags}
-        currentPhase={formData.phase}
+        currentPhase={formData.phaseId}
       />
     </>
   );
