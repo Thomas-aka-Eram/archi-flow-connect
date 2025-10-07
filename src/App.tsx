@@ -26,6 +26,7 @@ import Login from '@/pages/Login';
 import Signup from '@/pages/Signup';
 import NotFound from '@/pages/NotFound';
 import { Home } from '@/pages/Home';
+import SelectRepo from '@/pages/SelectRepo';
 import ProjectSettings from '@/pages/ProjectSettings';
 
 const queryClient = new QueryClient();
@@ -77,6 +78,7 @@ function App() {
                     <Route path="tasks" element={<AppLayout><TaskManagement /></AppLayout>} />
                     <Route path="reviews" element={<AppLayout><ReviewApproval /></AppLayout>} />
                     <Route path="github" element={<AppLayout><GitHubIntegration /></AppLayout>} />
+                    <Route path="github/select-repo" element={<AppLayout><SelectRepo /></AppLayout>} />
                     <Route path="reports" element={<AppLayout><Reports /></AppLayout>} />
                     <Route path="settings" element={<AppLayout><ProjectSettings /></AppLayout>} />
                   </Route>

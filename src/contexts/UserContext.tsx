@@ -2,7 +2,7 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import apiClient from '@/lib/api';
 
 interface User {
-  id: string;
+  userId: string;
   email: string;
   name: string;
   avatarUrl?: string;
@@ -27,12 +27,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const token = localStorage.getItem('authToken');
       if (token) {
         try {
-          apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+          // The interceptor handles the token now
           const response = await apiClient.get('/auth/profile');
           setUser(response.data);
         } catch (error) {
           console.error('Failed to fetch user profile', error);
-          localStorage.removeItem('authToken');
+          logout(); // Clear state if token is invalid
         }
       }
       setLoading(false);

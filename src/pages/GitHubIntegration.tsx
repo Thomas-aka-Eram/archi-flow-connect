@@ -1,10 +1,10 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Github, 
@@ -29,8 +29,10 @@ import {
 } from "@/components/ui/select";
 
 import { useProject } from '@/contexts/ProjectContext';
+import { useUser } from '@/contexts/UserContext';
 import apiClient from '@/lib/api';
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from 'react-router-dom';
 
 const vcsProviders = [
   { id: 'github', name: 'GitHub', icon: Github, color: 'text-gray-900' },
@@ -38,20 +40,74 @@ const vcsProviders = [
   { id: 'bitbucket', name: 'Bitbucket', icon: GitBranch, color: 'text-blue-600' },
 ];
 
-const mockCommits = [];
+const availableWebhookEvents = [
+  { id: 'push', label: 'Commits' },
+  { id: 'pull_request', label: 'Pull Requests' },
+  { id: 'create', label: 'Branch Creation' },
+  { id: 'release', label: 'Releases' },
+];
 
 export default function GitHubIntegration() {
   const [selectedProvider, setSelectedProvider] = useState('github');
-  const [isConnected, setIsConnected] = useState(true);
-  const [repoUrl, setRepoUrl] = useState('https://github.com/org/ecommerce-auth');
-  const [webhookSecret, setWebhookSecret] = useState('');
+  const [isConnected, setIsConnected] = useState(false);
+  const [repo, setRepo] = useState(null);
+  const [commits, setCommits] = useState([]);
   const [selectedCommit, setSelectedCommit] = useState<string | null>(null);
+  const [webhookEvents, setWebhookEvents] = useState<string[]>([]);
   const { currentProject } = useProject();
+  const { user, loading } = useUser();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const currentProvider = vcsProviders.find(p => p.id === selectedProvider);
 
-  const handleConnect = async () => {
+  useEffect(() => {
+    if (currentProject && user) {
+      apiClient.get(`/github/projects/${currentProject.id}/integration/github`)
+        .then(response => {
+          if (response.data.linked) {
+            setRepo(response.data.repo);
+            setWebhookEvents(response.data.webhookEvents);
+            setIsConnected(true);
+            fetchCommits();
+          } else {
+            setIsConnected(false);
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching integration status:', error);
+        });
+    }
+  }, [currentProject, user]);
+
+  const fetchCommits = () => {
+    if (currentProject) {
+      apiClient.get(`/github/projects/${currentProject.id}/github/commits`)
+        .then(response => {
+          const formattedCommits = response.data.map(commit => ({
+            id: commit.sha,
+            hash: commit.sha.substring(0, 7),
+            message: commit.commit.message,
+            author: commit.commit.author.name,
+            timestamp: new Date(commit.commit.author.date).toLocaleString(),
+            linkedTasks: [], // Mocked
+            linkedBlocks: [], // Mocked
+            filesChanged: 0, // Mocked
+          }));
+          setCommits(formattedCommits);
+        })
+        .catch(error => {
+          console.error('Error fetching commits:', error);
+          toast({
+            title: "Failed to fetch commits",
+            description: error.message || "An unexpected error occurred.",
+            variant: "destructive",
+          });
+        });
+    }
+  };
+
+  const handleConnect = () => {
     if (!currentProject) {
       toast({
         title: "No project selected",
@@ -60,32 +116,54 @@ export default function GitHubIntegration() {
       });
       return;
     }
-
-    try {
-      await apiClient.post(`/projects/${currentProject.id}/repos`, {
-        name: repoUrl,
-        webhookSecret,
-      });
-      setIsConnected(true);
+    if (!user) {
       toast({
-        title: "Repository Linked",
-        description: "Successfully linked the repository to your project.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Failed to link repository",
-        description: error.message || "An unexpected error occurred.",
+        title: "Not logged in",
+        description: "You must be logged in to connect to GitHub.",
         variant: "destructive",
       });
+      return;
     }
+    // Redirect to backend for GitHub OAuth, now including the user's ID
+    window.location.href = `http://localhost:3000/api/github/auth?projectId=${currentProject.id}&userId=${user.userId}`;
   };
 
   const handleSync = () => {
-    console.log('Syncing commits...');
+    fetchCommits();
   };
 
   const handleCommitSelect = (commitId: string) => {
     setSelectedCommit(commitId);
+  };
+
+  const handleWebhookEventChange = (eventId: string) => {
+    setWebhookEvents(prev => 
+      prev.includes(eventId) 
+        ? prev.filter(id => id !== eventId) 
+        : [...prev, eventId]
+    );
+  };
+
+  const handleConfigureWebhook = () => {
+    if (currentProject) {
+      apiClient.patch(`/github/projects/${currentProject.id}/integration/github/webhook`, {
+        events: webhookEvents,
+      })
+        .then(() => {
+          toast({
+            title: "Webhook preferences updated",
+            description: "Your webhook configuration has been saved.",
+          });
+        })
+        .catch(error => {
+          console.error('Error updating webhook:', error);
+          toast({
+            title: "Failed to update webhook",
+            description: error.message || "An unexpected error occurred.",
+            variant: "destructive",
+          });
+        });
+    }
   };
 
   return (
@@ -102,10 +180,6 @@ export default function GitHubIntegration() {
           <Button variant="outline" size="sm" onClick={handleSync} disabled={!isConnected}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Sync Commits
-          </Button>
-          <Button variant="outline" size="sm">
-            <Settings className="h-4 w-4 mr-2" />
-            Configure Webhook
           </Button>
         </div>
       </div>
@@ -150,25 +224,7 @@ export default function GitHubIntegration() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label htmlFor="repo-url">Repository URL</Label>
-                <Input
-                  id="repo-url"
-                  value={repoUrl}
-                  onChange={(e) => setRepoUrl(e.target.value)}
-                  placeholder={`https://${selectedProvider}.com/username/repository`}
-                />
-              </div>
-              <div>
-                <Label htmlFor="webhook-secret">Webhook Secret</Label>
-                <Input
-                  id="webhook-secret"
-                  value={webhookSecret}
-                  onChange={(e) => setWebhookSecret(e.target.value)}
-                  placeholder="Enter your webhook secret"
-                />
-              </div>
-              <Button onClick={handleConnect}>
+              <Button onClick={handleConnect} disabled={loading || !user?.userId}>
                 {currentProvider && <currentProvider.icon className="h-4 w-4 mr-2" />}
                 Connect to {currentProvider?.name}
               </Button>
@@ -178,7 +234,7 @@ export default function GitHubIntegration() {
               <div className="flex items-center gap-3">
                 <GitBranch className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <p className="font-medium">{repoUrl}</p>
+                  <p className="font-medium">{repo}</p>
                   <p className="text-sm text-muted-foreground">Last sync: 5 minutes ago</p>
                 </div>
               </div>
@@ -188,7 +244,7 @@ export default function GitHubIntegration() {
                   {currentProvider?.name}
                 </Badge>
                 <Button variant="outline" size="sm" asChild>
-                  <a href={repoUrl} target="_blank" rel="noopener noreferrer">
+                  <a href={`https://github.com/${repo}`} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="h-4 w-4 mr-2" />
                     View Repository
                   </a>
@@ -201,6 +257,37 @@ export default function GitHubIntegration() {
 
       {isConnected && (
         <>
+          {/* Webhook Configuration */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3">
+                <Settings className="h-5 w-5" />
+                Webhook Configuration
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Listen for these events:</Label>
+                {availableWebhookEvents.map(event => (
+                  <div key={event.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={event.id}
+                      checked={webhookEvents.includes(event.id)}
+                      onCheckedChange={() => handleWebhookEventChange(event.id)}
+                    />
+                    <label
+                      htmlFor={event.id}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      {event.label}
+                    </label>
+                  </div>
+                ))}
+              </div>
+              <Button onClick={handleConfigureWebhook}>Save Preferences</Button>
+            </CardContent>
+          </Card>
+
           {/* Integration Stats */}
           <div className="grid grid-cols-4 gap-4">
             <Card>
@@ -208,7 +295,7 @@ export default function GitHubIntegration() {
                 <div className="flex items-center gap-3">
                   <GitCommit className="h-8 w-8 text-blue-500" />
                   <div>
-                    <p className="text-2xl font-bold">{mockCommits.length}</p>
+                    <p className="text-2xl font-bold">{commits.length}</p>
                     <p className="text-sm text-muted-foreground">Total Commits</p>
                   </div>
                 </div>
@@ -220,7 +307,7 @@ export default function GitHubIntegration() {
                   <Link className="h-8 w-8 text-green-500" />
                   <div>
                     <p className="text-2xl font-bold">
-                      {mockCommits.filter(c => c.linkedTasks.length > 0 || c.linkedBlocks.length > 0).length}
+                      {commits.filter(c => c.linkedTasks?.length > 0 || c.linkedBlocks?.length > 0).length}
                     </p>
                     <p className="text-sm text-muted-foreground">Linked Commits</p>
                   </div>
@@ -233,7 +320,7 @@ export default function GitHubIntegration() {
                   <CheckCircle className="h-8 w-8 text-purple-500" />
                   <div>
                     <p className="text-2xl font-bold">
-                      {mockCommits.reduce((acc, c) => acc + c.linkedTasks.length, 0)}
+                      {commits.reduce((acc, c) => acc + (c.linkedTasks?.length || 0), 0)}
                     </p>
                     <p className="text-sm text-muted-foreground">Tasks Linked</p>
                   </div>
@@ -269,21 +356,20 @@ export default function GitHubIntegration() {
 
                 <TabsContent value="recent" className="p-6">
                   <CommitExplorer 
-                    commits={mockCommits} 
+                    commits={commits} 
                     onCommitSelect={handleCommitSelect}
                   />
                 </TabsContent>
 
                 <TabsContent value="linked" className="p-6">
                   <CommitExplorer 
-                    commits={mockCommits.filter(c => c.linkedTasks.length > 0 || c.linkedBlocks.length > 0)} 
+                    commits={commits.filter(c => c.linkedTasks?.length > 0 || c.linkedBlocks?.length > 0)} 
                     onCommitSelect={handleCommitSelect}
                   />
                 </TabsContent>
-
                 <TabsContent value="unlinked" className="p-6">
                   <CommitExplorer 
-                    commits={mockCommits.filter(c => c.linkedTasks.length === 0 && c.linkedBlocks.length === 0)} 
+                    commits={commits.filter(c => c.linkedTasks?.length === 0 && c.linkedBlocks?.length === 0)} 
                     onCommitSelect={handleCommitSelect}
                   />
                 </TabsContent>

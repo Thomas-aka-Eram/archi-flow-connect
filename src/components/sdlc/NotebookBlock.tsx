@@ -138,7 +138,7 @@ const TagDisplay = ({ tags, isSelected }: { tags: Tag[]; isSelected: boolean }) 
         </Badge>
       );
       if (j < path.length - 1) {
-        elements.push(<span key={`sep-${tag.id}`} className="text-muted-foreground text-xs font-bold">></span>);
+        elements.push(<span key={`sep-${tag.id}`} className="text-muted-foreground text-xs font-bold">{'>'}</span>);
       }
     }
     return (
