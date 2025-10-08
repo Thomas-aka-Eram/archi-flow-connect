@@ -114,7 +114,7 @@ export function AppSidebar() {
         {!isCollapsed && (
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">A</span>
+              <span className="text-white font-bold text-xl"><img src="/faviconwhite.png" alt="icon" /></span>
             </div>
             <span className="text-xl font-bold">Archi</span>
           </div>

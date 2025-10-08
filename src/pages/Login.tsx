@@ -55,7 +55,8 @@ export default function Login() {
         <div className="text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
             <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">A</span>
+              <span className="text-white font-bold text-xl"><img src="/faviconwhite.png" alt="icon" /></span>
+        
             </div>
             <span className="text-2xl font-bold">Archi</span>
           </div>
