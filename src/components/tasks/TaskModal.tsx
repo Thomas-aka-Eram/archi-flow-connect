@@ -19,6 +19,10 @@ import {
   Edit,
   GitCommit
 } from "lucide-react";
+import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
+import { RelatedDocs } from './RelatedDocs';
+
 
 import { useUser } from '@/contexts/UserContext';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
@@ -164,8 +168,8 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
               <div className="flex items-center gap-2 mt-2">
                 <Badge variant="outline">{task.status.replace('_', ' ')}</Badge>
                 <Badge variant="outline">{task.priority}</Badge>
-                <Badge variant="outline">{task.phase}</Badge>
-                <Badge variant="outline">{task.domain}</Badge>
+                <Badge variant="outline">{task.phase?.title}</Badge>
+                <Badge variant="outline">{task.domain?.title}</Badge>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -199,7 +203,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
               <TabsTrigger value="details">Task Details</TabsTrigger>
               <TabsTrigger value="docs">
                 <FileText className="h-4 w-4 mr-2" />
-                Docs Context ({(task.linkedBlocks || []).length})
+                Docs Context
               </TabsTrigger>
               <TabsTrigger value="activity">
                 <Activity className="h-4 w-4 mr-2" />
@@ -311,6 +315,10 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
             </TabsContent>
 
             <TabsContent value="docs" className="flex-1 overflow-y-auto space-y-4">
+              <RelatedDocs
+                domainId={task.domain.id}
+                tagIds={task.tags.map((t: any) => t.tag.id)}
+              />
               <div className="space-y-3">
                 <h3 className="font-medium">Linked SDLC Blocks</h3>
                 {(task.linkedBlocks || []).map((block) => (
@@ -323,12 +331,12 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                             <Badge variant="outline" className="text-xs">{block.phase} Phase</Badge>
                           </div>
                           <div className="text-sm text-muted-foreground mb-3">
-                            <div 
-                              className="prose prose-sm max-w-none"
-                              dangerouslySetInnerHTML={{ 
-                                __html: block.content.replace(/\n/g, '<br />').substring(0, 200) + '...' 
-                              }}
-                            />
+                            <ReactMarkdown 
+                              rehypePlugins={[rehypeRaw]}
+                              className="prose prose-sm max-w-none prose-invert"
+                            >
+                              {block.content.substring(0, 200) + '...'}
+                            </ReactMarkdown>
                           </div>
                           <Button 
                             variant="outline" 

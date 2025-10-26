@@ -30,6 +30,8 @@ import {
 } from "@/components/ui/tooltip";
 import { RichTextToolbar } from "./RichTextToolbar";
 import { BlockTagsModal } from "./BlockTagsModal";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface Tag {
   id: string;
@@ -360,9 +362,10 @@ export function NotebookBlock({
             <div className="p-4">
               {block.content ? (
                 <div 
-                  className="prose prose-sm max-w-none"
-                  dangerouslySetInnerHTML={{ __html: renderMarkdown(block.content) }}
-                />
+                  className="prose prose-sm max-w-none markdown-content-white"
+                >
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{block.content}</ReactMarkdown>
+                </div>
               ) : (
                 <div className="text-muted-foreground italic text-center py-8" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
                   Empty block - click to edit
