@@ -223,8 +223,8 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
                 <Input
                   id="hours"
                   type="number"
-                  value={formData.estimatedHours}
-                  onChange={(e) => setFormData({ ...formData, estimatedHours: e.target.value })}
+                  value={formData.estimateHours}
+                  onChange={(e) => setFormData({ ...formData, estimateHours: e.target.value })}
                   placeholder="8"
                 />
               </div>

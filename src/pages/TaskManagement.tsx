@@ -42,7 +42,7 @@ export default function TaskManagement() {
     switch (tab) {
       case 'my':
         if (!user) return [];
-        return tasks.filter(task => task.assignees.some(a => a.user.id === user.id));
+        return tasks.filter(task => task.assignees.some(a => a.user.id === user.userId));
       case 'review':
         return tasks.filter(task => task.status === 'IN_PROGRESS');
       case 'completed':

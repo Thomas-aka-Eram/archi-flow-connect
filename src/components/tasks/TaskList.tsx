@@ -149,7 +149,7 @@ export function TaskList({ tasks, onTaskSelect, viewMode }: TaskListProps) {
                   </div>
                   <div className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
-                    {task.estimatedHours}h
+                    {task.estimateHours}h
                   </div>
                   {task.linkedBlocks && task.linkedBlocks.length > 0 && (
                     <div className="flex items-center gap-1">
