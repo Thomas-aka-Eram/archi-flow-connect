@@ -192,7 +192,7 @@ export default function ProjectSettings() {
       });
       setMembers((prevMembers) =>
         prevMembers.map((member) =>
-          member.user.id === userId ? { ...member, role: newRole } : member,
+          member.id === userId ? { ...member, role: newRole } : member,
         ),
       );
     } catch (error) {
@@ -230,8 +230,8 @@ export default function ProjectSettings() {
             <TableBody>
               {members.map((member) => (
                 <TableRow key={member.id}>
-                  <TableCell>{member.name}</TableCell>
-                  <TableCell>{member.email}</TableCell>
+                  <TableCell>{member.name ?? member.user?.name}</TableCell>
+                  <TableCell>{member.email ?? member.user?.email}</TableCell>
                   <TableCell>
                     <Select
                       value={member.role}

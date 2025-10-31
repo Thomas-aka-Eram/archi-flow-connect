@@ -1,12 +1,13 @@
-
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Search, Filter, Clock, CheckCircle, XCircle } from "lucide-react";
-import { ReviewQueue } from "@/components/reviews/ReviewQueue";
-import { ReviewModal } from "@/components/reviews/ReviewModal";
+import { useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import apiClient from '@/lib/api';
+import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Search, Filter, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { ReviewQueue } from '@/components/reviews/ReviewQueue';
+import { ReviewModal } from '@/components/reviews/ReviewModal';
 
 const EmptyState = ({ message }: { message: string }) => (
   <div className="flex items-center justify-center h-64">
@@ -14,14 +15,29 @@ const EmptyState = ({ message }: { message: string }) => (
   </div>
 );
 
+const fetchReviews = async (projectId: string, status: string) => {
+  const url =
+    status === 'ALL'
+      ? `/projects/${projectId}/reviews`
+      : `/projects/${projectId}/reviews?status=${status}`;
+  const { data } = await apiClient.get(url);
+  return data;
+};
+
 export default function ReviewApproval() {
-  const [selectedReview, setSelectedReview] = useState<string | null>(null);
+  const { projectId } = useParams<{ projectId: string }>();
+  const [selectedReview, setSelectedReview] = useState<any | null>(null);
+  const [activeTab, setActiveTab] = useState('all');
 
-  const handleReviewSelect = (reviewId: string) => {
-    setSelectedReview(reviewId);
+  const { data: reviews = [], isLoading } = useQuery({
+    queryKey: ['reviews', projectId, activeTab],
+    queryFn: () => fetchReviews(projectId, activeTab.toUpperCase()),
+    enabled: !!projectId,
+  });
+
+  const handleReviewSelect = (review: any) => {
+    setSelectedReview(review);
   };
-
-  const reviews: any[] = [];
 
   return (
     <div className="p-6 space-y-6 h-full">
@@ -52,7 +68,9 @@ export default function ReviewApproval() {
             <div className="flex items-center gap-3">
               <Clock className="h-8 w-8 text-yellow-500" />
               <div>
-                <p className="text-2xl font-bold">0</p>
+                <p className="text-2xl font-bold">
+                  {reviews.filter((r) => r.task_reviews.status === 'PENDING').length}
+                </p>
                 <p className="text-sm text-muted-foreground">Pending Reviews</p>
               </div>
             </div>
@@ -63,7 +81,9 @@ export default function ReviewApproval() {
             <div className="flex items-center gap-3">
               <CheckCircle className="h-8 w-8 text-green-500" />
               <div>
-                <p className="text-2xl font-bold">0</p>
+                <p className="text-2xl font-bold">
+                  {reviews.filter((r) => r.task_reviews.status === 'APPROVED').length}
+                </p>
                 <p className="text-sm text-muted-foreground">Approved This Week</p>
               </div>
             </div>
@@ -74,7 +94,13 @@ export default function ReviewApproval() {
             <div className="flex items-center gap-3">
               <XCircle className="h-8 w-8 text-red-500" />
               <div>
-                <p className="text-2xl font-bold">0</p>
+                <p className="text-2xl font-bold">
+                  {
+                    reviews.filter(
+                      (r) => r.task_reviews.status === 'CHANGES_REQUESTED',
+                    ).length
+                  }
+                </p>
                 <p className="text-sm text-muted-foreground">Changes Requested</p>
               </div>
             </div>
@@ -98,37 +124,32 @@ export default function ReviewApproval() {
       {/* Review Tabs */}
       <Card>
         <CardContent className="p-0">
-          <Tabs defaultValue="all">
+          <Tabs
+            defaultValue="all"
+            onValueChange={(value) => setActiveTab(value)}
+          >
             <div className="border-b px-6 pt-6">
               <TabsList>
                 <TabsTrigger value="all">All Reviews</TabsTrigger>
-                <TabsTrigger value="docs">Docs Review Queue</TabsTrigger>
-                <TabsTrigger value="tasks">Task Review Queue</TabsTrigger>
-                <TabsTrigger value="my">My Reviews</TabsTrigger>
+                <TabsTrigger value="pending">Pending</TabsTrigger>
+                <TabsTrigger value="approved">Approved</TabsTrigger>
+                <TabsTrigger value="changes_requested">
+                  Changes Requested
+                </TabsTrigger>
               </TabsList>
             </div>
 
-            <TabsContent value="all" className="p-6">
-              {reviews.length > 0 ? (
-                <ReviewQueue 
-                  reviews={reviews} 
+            <TabsContent value={activeTab} className="p-6">
+              {isLoading ? (
+                <div>Loading...</div>
+              ) : reviews.length > 0 ? (
+                <ReviewQueue
+                  reviews={reviews}
                   onReviewSelect={handleReviewSelect}
                 />
               ) : (
                 <EmptyState message="No reviews available." />
               )}
-            </TabsContent>
-
-            <TabsContent value="docs" className="p-6">
-              <EmptyState message="No document reviews available." />
-            </TabsContent>
-
-            <TabsContent value="tasks" className="p-6">
-              <EmptyState message="No task reviews available." />
-            </TabsContent>
-
-            <TabsContent value="my" className="p-6">
-              <EmptyState message="You have no reviews assigned." />
             </TabsContent>
           </Tabs>
         </CardContent>
@@ -137,7 +158,7 @@ export default function ReviewApproval() {
       {/* Review Modal */}
       {selectedReview && (
         <ReviewModal
-          reviewId={selectedReview}
+          review={selectedReview}
           isOpen={!!selectedReview}
           onClose={() => setSelectedReview(null)}
         />

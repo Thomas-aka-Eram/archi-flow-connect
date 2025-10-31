@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { UserDisplay } from '../user/UserDisplay';
 import { 
   Calendar, 
   Clock, 
@@ -96,6 +97,25 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
     },
   });
 
+  const addFeedbackMutation = useMutation({
+    mutationFn: (comments: string) =>
+      apiClient.post(`/tasks/${taskId}/feedback`, { comments }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task', taskId] });
+      setNewComment('');
+      toast({
+        title: "Feedback submitted",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to submit feedback",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleFieldChange = (field: string, value: any) => {
     setFormData((prev: any) => ({ ...prev, [field]: value }));
   };
@@ -136,8 +156,9 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
     .filter(Boolean);
 
   const handleSubmitComment = () => {
-    console.log('Submitting comment:', newComment);
-    setNewComment('');
+    if (newComment.trim()) {
+      addFeedbackMutation.mutate(newComment.trim());
+    }
   };
 
   const handleStatusChange = (newStatus: string) => {
@@ -226,7 +247,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                 </TabsTrigger>
                 <TabsTrigger value="comments">
                   <MessageSquare className="h-4 w-4 mr-2" />
-                  Comments ({(task.comments || []).length})
+                  Feedback ({(task.feedback || []).length})
                 </TabsTrigger>
               </TabsList>
 
@@ -410,21 +431,16 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
               <TabsContent value="comments" className="flex-1 overflow-y-auto space-y-4">
                 <div className="space-y-4">
                   <div className="space-y-3">
-                    {(task.comments || []).map((comment) => (
-                      <Card key={comment.id}>
+                    {(task.feedback || []).map((feedbackItem) => (
+                      <Card key={feedbackItem.id}>
                         <CardContent className="p-4">
                           <div className="flex items-start gap-3">
-                            <Avatar className="w-8 h-8">
-                              <AvatarFallback className="text-xs">
-                                {comment.author.slice(0, 2).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
+                            <UserDisplay userId={feedbackItem.userId} />
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium">{comment.author}</span>
-                                <span className="text-xs text-muted-foreground">{comment.timestamp}</span>
+                                <span className="text-xs text-muted-foreground">{new Date(feedbackItem.createdAt).toLocaleString()}</span>
                               </div>
-                              <p className="text-sm">{comment.message}</p>
+                              <p className="text-sm">{feedbackItem.comments}</p>
                             </div>
                           </div>
                         </CardContent>
@@ -442,9 +458,9 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                           rows={3}
                         />
                         <div className="flex justify-end">
-                          <Button onClick={handleSubmitComment} disabled={!newComment.trim()}>
-                            <Send className="h-4 w-4 mr-2" />
-                            Comment
+                          <Button onClick={handleSubmitComment} disabled={!newComment.trim() || addFeedbackMutation.isPending}>
+                            {addFeedbackMutation.isPending ? 'Submitting...' : 'Comment'}
+                            <Send className="h-4 w-4 ml-2" />
                           </Button>
                         </div>
                       </div>

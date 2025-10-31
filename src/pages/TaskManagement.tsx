@@ -10,6 +10,7 @@ import { TaskList } from "@/components/tasks/TaskList";
 import { TaskModal } from "@/components/tasks/TaskModal";
 import { TaskCreationModal } from "@/components/tasks/TaskCreationModal";
 import { SmartAssignment } from "@/components/tasks/SmartAssignment";
+import { ReviewQueue } from "@/components/reviews/ReviewQueue";
 import apiClient from '@/lib/api';
 import { useUser } from '@/contexts/UserContext';
 import { useQuery } from '@tanstack/react-query';
@@ -44,7 +45,7 @@ export default function TaskManagement() {
         if (!user) return [];
         return tasks.filter(task => task.assignees.some(a => a.user.id === user.userId));
       case 'review':
-        return tasks.filter(task => task.status === 'IN_PROGRESS');
+        return tasks.filter(task => task.status === 'IN_REVIEW');
       case 'completed':
         return tasks.filter(task => task.status === 'COMPLETED');
       case 'backlog':
@@ -140,11 +141,7 @@ export default function TaskManagement() {
             </TabsContent>
 
             <TabsContent value="review" className="p-6">
-              <TaskList 
-                tasks={getTasksByTab('review')} 
-                onTaskSelect={handleTaskSelect}
-                viewMode={viewMode}
-              />
+              <ReviewQueue projectId={projectId} />
             </TabsContent>
 
             <TabsContent value="completed" className="p-6">
