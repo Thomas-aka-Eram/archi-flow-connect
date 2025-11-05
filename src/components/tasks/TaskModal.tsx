@@ -81,7 +81,9 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
     mutationFn: (updatedFields: any) =>
       apiClient.patch(`/tasks/${taskId}`, updatedFields),
     onSuccess: () => {
+      console.log('Task updated successfully, invalidating queries...');
       queryClient.invalidateQueries({ queryKey: ['task', taskId] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] }); // Invalidate the tasks list as well
       toast({
         title: "Task updated",
       });
@@ -162,7 +164,7 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
   };
 
   const handleStatusChange = (newStatus: string) => {
-    const isAssignee = task.assignees.some((a: any) => a.user.id === user?.userId);
+    const isAssignee = task.assignees.some((a: any) => a.user.id === user?.id);
 
     if (!isAssignee) {
       toast({
@@ -184,6 +186,12 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
     console.log('Opening document:', blockId);
     // Navigate to SDLC document
   };
+
+  console.log('TaskModal members:', members);
+  console.log('TaskModal user:', user);
+  const currentUserMembership = members?.find((member: any) => member.id === user?.id);
+  const userRole = currentUserMembership?.role;
+  const canEditTask = userRole && ['Admin', 'Manager'].includes(userRole);
 
   return (
     <>
@@ -220,10 +228,12 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                     <SelectItem value="COMPLETED">Completed</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button variant="outline" size="sm" onClick={() => setIsEditing(!isEditing)}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  {isEditing ? 'Cancel' : 'Edit'}
-                </Button>
+                {canEditTask && (
+                  <Button variant="outline" size="sm" onClick={() => setIsEditing(!isEditing)}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    {isEditing ? 'Cancel' : 'Edit'}
+                  </Button>
+                )}
                 {isEditing && (
                   <Button size="sm" onClick={handleSave} disabled={updateTaskMutation.isPending}>
                     {updateTaskMutation.isPending ? 'Saving...' : 'Save'}

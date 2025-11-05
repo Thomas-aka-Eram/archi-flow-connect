@@ -2,7 +2,7 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import apiClient from '@/lib/api';
 
 interface User {
-  userId: string;
+  id: string;
   email: string;
   name: string;
   avatarUrl?: string;
@@ -11,6 +11,7 @@ interface User {
 
 interface UserContextType {
   user: User | null;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
   loading: boolean;
   login: (token: string) => Promise<void>;
   logout: () => void;
@@ -25,11 +26,16 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const fetchUser = async () => {
       const token = localStorage.getItem('authToken');
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
       if (token) {
         try {
           // The interceptor handles the token now
           const response = await apiClient.get('/auth/profile');
           setUser(response.data);
+          localStorage.setItem('user', JSON.stringify(response.data));
         } catch (error) {
           console.error('Failed to fetch user profile', error);
           logout(); // Clear state if token is invalid
@@ -69,12 +75,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
     setUser(null);
     delete apiClient.defaults.headers.common['Authorization'];
   };
 
   return (
-    <UserContext.Provider value={{ user, loading, login, logout }}>
+    <UserContext.Provider value={{ user, setUser, loading, login, logout }}>
       {children}
     </UserContext.Provider>
   );

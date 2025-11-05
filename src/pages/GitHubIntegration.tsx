@@ -90,6 +90,7 @@ export default function GitHubIntegration() {
             message: commit.commit.message,
             author: commit.commit.author.name,
             timestamp: new Date(commit.commit.author.date).toLocaleString(),
+            url: commit.html_url,
             linkedTasks: [], // Mocked
             linkedBlocks: [], // Mocked
             filesChanged: 0, // Mocked
@@ -125,7 +126,7 @@ export default function GitHubIntegration() {
       return;
     }
     // Redirect to backend for GitHub OAuth, now including the user's ID
-    window.location.href = `http://localhost:3000/api/github/auth?projectId=${currentProject.id}&userId=${user.userId}`;
+    window.location.href = `http://localhost:3000/api/github/auth?projectId=${currentProject.id}&userId=${user.id}`;
   };
 
   const handleSync = () => {
@@ -224,7 +225,7 @@ export default function GitHubIntegration() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button onClick={handleConnect} disabled={loading || !user?.userId}>
+              <Button onClick={handleConnect} disabled={loading || !user?.id}>
                 {currentProvider && <currentProvider.icon className="h-4 w-4 mr-2" />}
                 Connect to {currentProvider?.name}
               </Button>

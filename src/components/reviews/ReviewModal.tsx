@@ -13,15 +13,15 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useUser } from '@/contexts/UserContext';
 
 const approveReview = (reviewId: string) => {
-  return apiClient.post(`/projects/projectId/reviews/${reviewId}/approve`);
+  return apiClient.post(`/reviews/${reviewId}/approve`);
 };
 
 const assignReviewer = ({ reviewId, reviewerId }: { reviewId: string; reviewerId: string }) => {
-  return apiClient.patch(`/projects/projectId/reviews/${reviewId}/assign`, { reviewerId });
+  return apiClient.post(`/reviews/${reviewId}/assign`, { reviewerId });
 };
 
 const requestChanges = ({ reviewId, comments }: { reviewId: string; comments: string }) => {
-  return apiClient.post(`/projects/projectId/reviews/${reviewId}/request-changes`, { comments });
+  return apiClient.post(`/reviews/${reviewId}/request-changes`, { comments });
 };
 
 export function ReviewModal({ review, isOpen, onClose }) {
@@ -30,37 +30,37 @@ export function ReviewModal({ review, isOpen, onClose }) {
   const { user } = useUser();
 
   const approveMutation = useMutation({
-    mutationFn: approveReview,
+    mutationFn: async (reviewId: string) => {
+      await assignReviewer({ reviewId, reviewerId: user.id });
+      return approveReview(reviewId);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['reviews', review.tasks.projectId] });
+      queryClient.invalidateQueries({ queryKey: ['reviews', review.task.projectId] });
       onClose();
     },
   });
 
-  const assignReviewerMutation = useMutation({
-    mutationFn: assignReviewer,
-    onSuccess: () => {
-      requestChangesMutation.mutate({ reviewId: review.task_reviews.id, comments });
+  const assignAndRequestChangesMutation = useMutation({
+    mutationFn: async ({ reviewId, reviewerId, comments }) => {
+      await assignReviewer({ reviewId, reviewerId });
+      return requestChanges({ reviewId, comments });
     },
-  });
-
-  const requestChangesMutation = useMutation({
-    mutationFn: requestChanges,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['reviews', review.tasks.projectId] });
+      queryClient.invalidateQueries({ queryKey: ['reviews', review.task.projectId] });
       onClose();
     },
   });
 
   const handleApprove = () => {
-    approveMutation.mutate(review.task_reviews.id);
+    approveMutation.mutate(review.id);
   };
 
   const handleRequestChanges = () => {
     if (user) {
-      assignReviewerMutation.mutate({
-        reviewId: review.task_reviews.id,
-        reviewerId: user.userId,
+      assignAndRequestChangesMutation.mutate({
+        reviewId: review.id,
+        reviewerId: user.id,
+        comments,
       });
     }
   };
@@ -69,10 +69,10 @@ export function ReviewModal({ review, isOpen, onClose }) {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Review Task: {review.tasks.title}</DialogTitle>
+          <DialogTitle>Review Task: {review.task.title}</DialogTitle>
         </DialogHeader>
         <div>
-          <p>{review.tasks.description}</p>
+          <p>{review.task.description}</p>
           {/* TODO: Display linked commits and documents */}
         </div>
         <div className="mt-4">
@@ -89,7 +89,7 @@ export function ReviewModal({ review, isOpen, onClose }) {
           <Button
             variant="destructive"
             onClick={handleRequestChanges}
-            disabled={!comments || assignReviewerMutation.isPending || requestChangesMutation.isPending}
+            disabled={!comments || assignAndRequestChangesMutation.isPending}
           >
             Request Changes
           </Button>

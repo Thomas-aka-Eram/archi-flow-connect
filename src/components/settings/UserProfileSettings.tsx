@@ -26,7 +26,6 @@ export function UserProfileSettings() {
   const [formData, setFormData] = useState<Partial<UserProfile>>({});
   const [isEditing, setIsEditing] = useState(false);
 
-  // Fetch user profile data
   const { data: userProfile, isLoading, isError, error } = useQuery<UserProfile>({
     queryKey: ['userProfile', user?.id],
     queryFn: async () => {
@@ -34,34 +33,42 @@ export function UserProfileSettings() {
       return response.data;
     },
     enabled: !!user?.id,
-    onSuccess: (data) => {
-      setFormData({
-        fullName: data.name,
-        email: data.email,
-        timezone: data.timezone,
-        language: data.language,
-        theme: data.theme,
-      });
-    },
   });
+
+  useEffect(() => {
+    if (userProfile) {
+      setFormData({
+        name: userProfile.name,
+        email: userProfile.email,
+        timezone: userProfile.timezone,
+        language: userProfile.language,
+        theme: userProfile.theme,
+      });
+    }
+  }, [userProfile]);
 
   // Mutation for updating user profile
   const updateProfileMutation = useMutation({
     mutationFn: (updatedProfile: Partial<UserProfile>) =>
       apiClient.patch('/users/profile', updatedProfile),
-    onSuccess: (data) => {
+    onSuccess: (response) => {
+      const updatedUser = response.data;
+      console.log('Profile update successful, response data:', updatedUser);
       toast({
         title: "Profile updated successfully.",
         description: "Your profile information has been saved.",
       });
       queryClient.invalidateQueries({ queryKey: ['userProfile', user?.id] });
       // Update user context if name or email changed
-      if (user && (data.name !== user.name || data.email !== user.email)) {
-        setUser({ ...user, name: data.name, email: data.email });
+      if (user && (updatedUser.name !== user.name || updatedUser.email !== user.email)) {
+        const newUser = { ...user, name: updatedUser.name, email: updatedUser.email };
+        setUser(newUser);
+        localStorage.setItem('user', JSON.stringify(newUser));
       }
       setIsEditing(false);
     },
     onError: (err: any) => {
+      console.error('Profile update failed:', err);
       toast({
         title: "Failed to update profile.",
         description: err.response?.data?.message || "An unexpected error occurred.",
@@ -80,6 +87,7 @@ export function UserProfileSettings() {
   };
 
   const handleSubmit = () => {
+    console.log('Submitting form data:', formData);
     updateProfileMutation.mutate(formData);
   };
 
@@ -102,10 +110,10 @@ export function UserProfileSettings() {
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="fullName">Full Name</Label>
+            <Label htmlFor="name">Full Name</Label>
             <Input
-              id="fullName"
-              value={formData.fullName || ''}
+              id="name"
+              value={formData.name || ''}
               onChange={handleChange}
               disabled={!isEditing}
             />
@@ -181,7 +189,18 @@ export function UserProfileSettings() {
         <div className="flex justify-end gap-2">
           {isEditing ? (
             <>
-              <Button variant="outline" onClick={() => setIsEditing(false)} disabled={updateProfileMutation.isPending}>
+              <Button variant="outline" onClick={() => {
+                setIsEditing(false);
+                if (userProfile) {
+                  setFormData({
+                    name: userProfile.name,
+                    email: userProfile.email,
+                    timezone: userProfile.timezone,
+                    language: userProfile.language,
+                    theme: userProfile.theme,
+                  });
+                }
+              }} disabled={updateProfileMutation.isPending}>
                 Cancel
               </Button>
               <Button onClick={handleSubmit} disabled={updateProfileMutation.isPending}>

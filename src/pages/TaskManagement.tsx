@@ -11,12 +11,16 @@ import { TaskModal } from "@/components/tasks/TaskModal";
 import { TaskCreationModal } from "@/components/tasks/TaskCreationModal";
 import { SmartAssignment } from "@/components/tasks/SmartAssignment";
 import { ReviewQueue } from "@/components/reviews/ReviewQueue";
+import { ReviewModal } from '@/components/reviews/ReviewModal';
 import apiClient from '@/lib/api';
 import { useUser } from '@/contexts/UserContext';
 import { useQuery } from '@tanstack/react-query';
 
-const fetchTasks = async (projectId: string) => {
-  const { data } = await apiClient.get(`/tasks/project/${projectId}`);
+const fetchTasks = async (projectId: string, assigneeId?: string) => {
+  const url = assigneeId
+    ? `/tasks/project/${projectId}?assigneeId=${assigneeId}`
+    : `/tasks/project/${projectId}`;
+  const { data } = await apiClient.get(url);
   return data;
 };
 
@@ -27,23 +31,44 @@ export default function TaskManagement() {
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedReview, setSelectedReview] = useState<any | null>(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
 
   const { data: tasks = [], isLoading, isError } = useQuery({
-    queryKey: ['tasks', projectId],
-    queryFn: () => fetchTasks(projectId!),
-    enabled: !!projectId,
+    queryKey: ['tasks', projectId, activeTab],
+    queryFn: () => {
+      const assigneeId = activeTab === 'my' ? user?.id : undefined;
+      return fetchTasks(projectId!, assigneeId);
+    },
+    enabled: !!projectId && !!user,
+  });
+
+  const { data: reviewQueue = [] } = useQuery({
+    queryKey: ['review-queue', projectId],
+    queryFn: async () => {
+      const response = await apiClient.get('/reviews/queue');
+      return response.data;
+    },
+    enabled: !!projectId && activeTab === 'review',
+    onSuccess: (data) => {
+      console.log('Review queue data:', data);
+    }
   });
 
   const handleTaskSelect = (taskId: string) => {
     setSelectedTask(taskId);
   };
 
+  const handleReviewSelect = (review: any) => {
+    setSelectedReview(review);
+    setShowReviewModal(true);
+  };
+
   const getTasksByTab = (tab: string) => {
     if (!tasks) return [];
     switch (tab) {
       case 'my':
-        if (!user) return [];
-        return tasks.filter(task => task.assignees.some(a => a.user.id === user.userId));
+        return tasks; // The query is already filtered
       case 'review':
         return tasks.filter(task => task.status === 'IN_REVIEW');
       case 'completed':
@@ -141,7 +166,7 @@ export default function TaskManagement() {
             </TabsContent>
 
             <TabsContent value="review" className="p-6">
-              <ReviewQueue projectId={projectId} />
+              <ReviewQueue reviews={reviewQueue} onReviewSelect={handleReviewSelect} />
             </TabsContent>
 
             <TabsContent value="completed" className="p-6">
@@ -169,6 +194,15 @@ export default function TaskManagement() {
           taskId={selectedTask}
           isOpen={!!selectedTask}
           onClose={() => setSelectedTask(null)}
+        />
+      )}
+
+      {/* Review Modal */}
+      {selectedReview && (
+        <ReviewModal
+          review={selectedReview}
+          isOpen={showReviewModal}
+          onClose={() => setShowReviewModal(false)}
         />
       )}
 

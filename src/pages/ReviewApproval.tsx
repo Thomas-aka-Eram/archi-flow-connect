@@ -18,8 +18,8 @@ const EmptyState = ({ message }: { message: string }) => (
 const fetchReviews = async (projectId: string, status: string) => {
   const url =
     status === 'ALL'
-      ? `/projects/${projectId}/reviews`
-      : `/projects/${projectId}/reviews?status=${status}`;
+      ? `/reviews/project/${projectId}`
+      : `/reviews/project/${projectId}?status=${status}`;
   const { data } = await apiClient.get(url);
   return data;
 };
@@ -69,7 +69,7 @@ export default function ReviewApproval() {
               <Clock className="h-8 w-8 text-yellow-500" />
               <div>
                 <p className="text-2xl font-bold">
-                  {reviews.filter((r) => r.task_reviews.status === 'PENDING').length}
+                  {reviews.filter((r) => r.status === 'PENDING').length}
                 </p>
                 <p className="text-sm text-muted-foreground">Pending Reviews</p>
               </div>
@@ -82,7 +82,7 @@ export default function ReviewApproval() {
               <CheckCircle className="h-8 w-8 text-green-500" />
               <div>
                 <p className="text-2xl font-bold">
-                  {reviews.filter((r) => r.task_reviews.status === 'APPROVED').length}
+                  {reviews.filter((r) => r.status === 'APPROVED').length}
                 </p>
                 <p className="text-sm text-muted-foreground">Approved This Week</p>
               </div>
@@ -97,7 +97,7 @@ export default function ReviewApproval() {
                 <p className="text-2xl font-bold">
                   {
                     reviews.filter(
-                      (r) => r.task_reviews.status === 'CHANGES_REQUESTED',
+                      (r) => r.status === 'CHANGES_REQUESTED',
                     ).length
                   }
                 </p>

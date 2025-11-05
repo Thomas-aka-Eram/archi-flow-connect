@@ -32,13 +32,13 @@ export function ReviewQueue({
         <TableBody>
           {Array.isArray(reviews) &&
             reviews.map((review: any) => (
-              <TableRow key={review.task_reviews.id}>
-                <TableCell>{review.tasks.title}</TableCell>
+              <TableRow key={review.id}>
+                <TableCell>{review.task?.title || 'Task not found'}</TableCell>
                 <TableCell>
-                  <UserDisplay userId={review.task_reviews.requesterId} />
+                  <UserDisplay userId={review.requester?.id} />
                 </TableCell>
                 <TableCell>
-                  <Badge>{review.task_reviews.status}</Badge>
+                  <Badge>{review.status}</Badge>
                 </TableCell>
                 <TableCell>
                   <Button size="sm" onClick={() => onReviewSelect(review)}>
