@@ -329,6 +329,18 @@ export function TaskModal({ taskId, isOpen, onClose }: TaskModalProps) {
                         <span className="text-sm text-muted-foreground">Milestone</span>
                         <span className="text-sm">{task.milestone}</span>
                       </div>
+
+                      {task.commits && task.commits.length > 0 && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Linked Commit</span>
+                          <Button asChild variant="outline" size="sm">
+                            <a href={task.commits[0].commit.url} target="_blank" rel="noopener noreferrer">
+                              <GitCommit className="h-4 w-4 mr-2" />
+                              {task.commits[0].commit.commitHash.substring(0, 7)}
+                            </a>
+                          </Button>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
 
